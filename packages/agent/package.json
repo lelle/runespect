@@ -1,0 +1,84 @@
+{
+  "name": "@runespect/agent",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "In-page agent for runespect: holds the component tree and live runes state the injected instrumentation reports",
+  "keywords": [
+    "svelte",
+    "svelte5",
+    "devtools",
+    "runes"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lelle/runespect.git",
+    "directory": "packages/agent"
+  },
+  "homepage": "https://github.com/lelle/runespect#readme",
+  "bugs": {
+    "url": "https://github.com/lelle/runespect/issues"
+  },
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./internal": {
+      "svelte": "./src/internal.svelte.ts",
+      "default": "./src/internal.svelte.ts"
+    },
+    "./runtime": {
+      "svelte": "./src/runtime.ts",
+      "default": "./src/runtime.ts"
+    },
+    "./protocol": {
+      "svelte": "./src/protocol/index.ts",
+      "default": "./src/protocol/index.ts"
+    },
+    "./protocol/internal": {
+      "svelte": "./src/protocol/internal.ts",
+      "default": "./src/protocol/internal.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "svelte": "./dist/index.js",
+        "default": "./dist/index.js"
+      },
+      "./internal": {
+        "types": "./dist/internal.svelte.d.ts",
+        "svelte": "./dist/internal.svelte.js",
+        "default": "./dist/internal.svelte.js"
+      },
+      "./runtime": {
+        "types": "./dist/runtime.d.ts",
+        "svelte": "./dist/runtime.js",
+        "default": "./dist/runtime.js"
+      },
+      "./protocol": {
+        "types": "./dist/protocol/index.d.ts",
+        "svelte": "./dist/protocol/index.js",
+        "default": "./dist/protocol/index.js"
+      },
+      "./protocol/internal": {
+        "types": "./dist/protocol/internal.d.ts",
+        "svelte": "./dist/protocol/internal.js",
+        "default": "./dist/protocol/internal.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "svelte-package -i src -o dist && tsc -p tsconfig.protocol.json",
+    "prepack": "pnpm build"
+  },
+  "peerDependencies": {
+    "svelte": "^5.20.5"
+  }
+}

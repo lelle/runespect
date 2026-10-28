@@ -1,0 +1,8 @@
+{
+  "threshold": 3,
+  "reporters": ["console"],
+  "absolute": false,
+  "gitignore": true,
+  "ignore": ["**/dist/**", "**/node_modules/**", "**/fixtures/**", "**/*.d.ts", "**/test/**"],
+  "format": ["typescript", "javascript", "svelte"]
+}

@@ -1,0 +1,63 @@
+{
+  "name": "@runespect/ui",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "runespect's devtools UI for Svelte 5: the panel and the in-page <Inspect> overlay",
+  "keywords": [
+    "svelte",
+    "svelte5",
+    "devtools",
+    "runes"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lelle/runespect.git",
+    "directory": "packages/ui"
+  },
+  "homepage": "https://github.com/lelle/runespect#readme",
+  "bugs": {
+    "url": "https://github.com/lelle/runespect/issues"
+  },
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./internal": {
+      "svelte": "./src/internal.ts",
+      "default": "./src/internal.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "svelte": "./dist/index.js",
+        "default": "./dist/index.js"
+      },
+      "./internal": {
+        "types": "./dist/internal.d.ts",
+        "svelte": "./dist/internal.js",
+        "default": "./dist/internal.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "svelte-package -i src -o dist",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@runespect/agent": "workspace:*"
+  },
+  "peerDependencies": {
+    "svelte": "^5.20.5"
+  },
+  "devDependencies": {
+    "svelte": "5.57.1"
+  }
+}

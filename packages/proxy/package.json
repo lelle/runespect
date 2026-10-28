@@ -1,0 +1,25 @@
+{
+  "name": "@runespect/proxy",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Experimental: records a dev Svelte app's runtime, for a host that can rewrite a page's scripts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@runespect/agent": "workspace:*"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
+  },
+  "scripts": {
+    "test": "vitest run"
+  }
+}

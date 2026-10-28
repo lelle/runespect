@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.playwright-mcp/
+test-results/
+playwright-report/
+coverage/
+# Components and modules the instrumentation tests write and compile (test/helpers/instrumented.ts).
+.fixtures/
+.svelte-kit/
+.idea/
+packages/vite-plugin/panel-dist/
+/site/

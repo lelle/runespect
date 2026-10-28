@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in runespect does not work as described
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The smallest app or component that shows it is the most useful.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where do you look at the state?
+      options:
+        - Panel window (/__runespect/)
+        - In-page overlay (<Inspect>)
+        - Browser extension
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: Run `npm ls svelte vite @sveltejs/vite-plugin-svelte @sveltejs/kit @runespect/vite-plugin` and add your browser.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: dump
+    attributes:
+      label: Event log
+      description: >-
+        In the console of the inspected page, run `copy(window.__runespect.dump())` and paste the
+        result. It holds message kinds, counts and lifecycle, never your app's values.
+      render: json

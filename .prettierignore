@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+/site
+coverage
+test-results
+playwright-report
+.svelte-kit
+pnpm-lock.yaml
+**/*.d.ts
+packages/prod-reader/test/fixtures

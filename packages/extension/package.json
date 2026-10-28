@@ -1,0 +1,25 @@
+{
+  "name": "@runespect/extension",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Browser-extension devtools panel for runespect",
+  "homepage": "https://github.com/lelle/runespect#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lelle/runespect.git",
+    "directory": "packages/extension"
+  },
+  "scripts": {
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@runespect/agent": "workspace:*",
+    "@runespect/ui": "workspace:*",
+    "@crxjs/vite-plugin": "3.0.0",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "vite": "8.3.4",
+    "svelte": "5.57.1"
+  }
+}

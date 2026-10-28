@@ -1,0 +1,23 @@
+{
+  "name": "@runespect/prod-reader",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Experimental: reads a production Svelte build's runtime, for a host that can rewrite a page's scripts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@runespect/agent": "workspace:*",
+    "@jridgewell/sourcemap-codec": "1.6.0",
+    "acorn": "8.18.0"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.2",
+    "vitest": "5.0.3"
+  },
+  "scripts": {
+    "test": "vitest run"
+  }
+}

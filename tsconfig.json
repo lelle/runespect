@@ -1,0 +1,38 @@
+{
+  "extends": "@tsconfig/svelte/tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "resolveJsonModule": true,
+    "erasableSyntaxOnly": true,
+    "types": ["node", "chrome"]
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.svelte",
+    "packages/*/test/**/*.ts",
+    "packages/*/*.config.ts",
+    "packages/*/main.ts",
+    "apps/*/src/**/*.ts",
+    "apps/*/src/**/*.svelte",
+    "apps/*/test/**/*.ts",
+    "apps/*/*.config.ts",
+    "apps/*/main.ts",
+    "scripts/*.ts",
+    "e2e/*.ts"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.fixtures/**",
+    "apps/sveltekit-spa/**",
+    "apps/site/**"
+  ]
+}

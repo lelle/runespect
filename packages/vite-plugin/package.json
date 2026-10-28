@@ -1,0 +1,64 @@
+{
+  "name": "@runespect/vite-plugin",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Vite plugin and Svelte preprocessor that instrument Svelte 5 components for runespect and serve its panel",
+  "keywords": [
+    "svelte",
+    "svelte5",
+    "devtools",
+    "runes"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lelle/runespect.git",
+    "directory": "packages/vite-plugin"
+  },
+  "homepage": "https://github.com/lelle/runespect#readme",
+  "bugs": {
+    "url": "https://github.com/lelle/runespect/issues"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./internal": "./src/internal.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./internal": {
+        "types": "./dist/internal.d.ts",
+        "default": "./dist/internal.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "panel-dist"
+  ],
+  "scripts": {
+    "build": "vite build --config panel/vite.config.ts && tsc -p tsconfig.build.json",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "magic-string": "^0.30.21",
+    "@runespect/agent": "workspace:*"
+  },
+  "peerDependencies": {
+    "svelte": "^5.20.5",
+    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "devDependencies": {
+    "@runespect/ui": "workspace:*",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "svelte": "5.57.1",
+    "vite": "8.3.4"
+  }
+}

@@ -1,0 +1,161 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to a pull request makes its older runs moot.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Commit standard (CONTRIBUTING.md)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        # A branch's first push has no "before", and a forced push has one that is no longer part
+        # of the repository: check the whole history instead.
+        run: |
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            RANGE=HEAD
+          else
+            RANGE="$BASE..HEAD"
+          fi
+          node scripts/check-commit-msg.ts --range "$RANGE"
+
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The project site draws its diagrams in Chrome, in its tests and its build.
+      - name: Install Chrome for Playwright
+        run: pnpm exec playwright install chrome
+      - name: Type-check
+        run: pnpm check
+      - name: Type-check the SvelteKit app without the plugin (the extension's fallback target)
+        run: pnpm --filter sveltekit-spa check
+      - name: Type-check the project site
+        run: pnpm --filter site check
+      - name: Lint
+        run: pnpm lint
+      - name: Format check
+        run: pnpm format:check
+      # Every unit, component and repo-script test in one run, with coverage. The numbers are
+      # surfaced in the job summary and the report uploaded; they gate nothing.
+      - name: Unit, component and script tests, with coverage
+        shell: bash
+        run: |
+          pnpm test:coverage | tee coverage.log
+          { echo '### Coverage'; echo '```'; grep -E '^(Statements|Branches|Functions|Lines)' coverage.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+      - name: Build packages
+        run: pnpm -r --if-present build
+      # Informational quality reports — surfaced, not gating.
+      - name: Dead code (knip)
+        run: pnpm deadcode
+        continue-on-error: true
+      - name: Duplicate code (jscpd)
+        run: pnpm dupcheck
+        continue-on-error: true
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the standalone panel bundle (served at /__runespect/)
+        run: pnpm --filter @runespect/vite-plugin build
+      - name: Install Chrome for Playwright
+        run: pnpm exec playwright install chrome
+      - name: E2E
+        run: pnpm e2e
+      - name: HMR keeps the tree whole and live
+        run: pnpm test:hmr
+      # The only test of the real extension: it needs a headed Chromium, so a virtual display.
+      - name: The extension in a real browser
+        run: |
+          pnpm exec playwright install chromium
+          pnpm --filter @runespect/extension build
+          pnpm --filter playground dev --port 5187 --strictPort &
+          for i in $(seq 1 120); do curl -sf http://localhost:5187/ > /dev/null && break; sleep 0.5; done
+          xvfb-run -a pnpm test:extension
+      # The packages as a user installs them: packed, outside the workspace, in a fresh Vite app.
+      - name: Packed packages in a fresh app
+        run: pnpm test:pack
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: e2e-test-results
+          path: test-results/
+          retention-days: 7
+
+  # The lowest supported Svelte with each older Vite major; the newest versions are the workspace's
+  # own, covered above.
+  versions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { svelte: 5.20.5, vite: 6.0.0, vite-plugin-svelte: 5.1.1, kit: 2.70.3, unit: true }
+          - { svelte: 5.20.5, vite: 7.3.7, vite-plugin-svelte: 6.2.4, kit: 2.70.3, unit: false }
+    name: versions (svelte ${{ matrix.svelte }}, vite ${{ matrix.vite }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Packed packages in a fresh app
+        env:
+          RUNESPECT_SVELTE: ${{ matrix.svelte }}
+          RUNESPECT_VITE: ${{ matrix.vite }}
+          RUNESPECT_VPS: ${{ matrix.vite-plugin-svelte }}
+          # Kit 3 needs Svelte 5.57.1; the default job packs into Kit 3.
+          RUNESPECT_KIT: ${{ matrix.kit }}
+        run: |
+          pnpm exec playwright install chromium
+          pnpm test:pack
+      # SvelteKit 3 in sveltekit-spa needs a newer Svelte, so its install scripts are skipped.
+      - name: Unit + component tests on the lowest Svelte
+        if: matrix.unit
+        run: |
+          printf 'overrides:\n  svelte: ${{ matrix.svelte }}\n' >> pnpm-workspace.yaml
+          pnpm install --no-frozen-lockfile --ignore-scripts
+          pnpm --filter playground test

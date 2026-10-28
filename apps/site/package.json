@@ -1,0 +1,32 @@
+{
+  "name": "site",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#lib": "./src/lib",
+    "#lib/*": "./src/lib/*"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "pnpm --filter demo build && vite build && node copy-demo.ts",
+    "test": "vitest run",
+    "prepare": "svelte-kit sync",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@sveltejs/adapter-static": "4.0.0",
+    "@sveltejs/kit": "3.0.0",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "marked": "18.1.1",
+    "mermaid": "12.2.0",
+    "shiki": "4.5.0",
+    "svelte": "5.57.1",
+    "svelte-check": "4.7.6",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
+  }
+}

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>runespect panel harness</title>
+    <style>
+      body {
+        font:
+          14px system-ui,
+          sans-serif;
+        margin: 0;
+        display: flex;
+        height: 100vh;
+      }
+      #app {
+        flex: 1 1 50%;
+        overflow: auto;
+        padding: 1rem;
+      }
+      #panel {
+        flex: 1 1 50%;
+        min-width: 0;
+        border-left: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="panel"></div>
+    <script type="module" src="/panel.ts"></script>
+  </body>
+</html>

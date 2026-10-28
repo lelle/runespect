@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.0/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "lelle/runespect" }],
+  "commit": false,
+  "fixed": [["@runespect/agent", "@runespect/ui", "@runespect/vite-plugin"]],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "privatePackages": { "version": true, "tag": true },
+  "ignore": ["playground", "sveltekit-spa", "@runespect/proxy", "@runespect/prod-reader"]
+}

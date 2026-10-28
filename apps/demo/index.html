@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>runespect demo</title>
+    <link rel="icon" type="image/png" href="../../packages/extension/public/icons/icon-32.png" />
+    <style>
+      body {
+        margin: 0;
+        font:
+          15px system-ui,
+          sans-serif;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      header {
+        padding: 0.6rem 1rem;
+        border-bottom: 1px solid #ccc;
+      }
+      header a {
+        color: inherit;
+      }
+      header details {
+        margin-top: 0.3rem;
+      }
+      header summary {
+        cursor: pointer;
+      }
+      header ul {
+        margin: 0.3rem 0 0;
+        padding-left: 1.2rem;
+      }
+      main {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+      #app {
+        flex: 1 1 45%;
+        overflow: auto;
+        padding: 1rem;
+      }
+      #panel {
+        flex: 1 1 55%;
+        min-width: 0;
+        border-left: 1px solid #ccc;
+      }
+      @media (max-width: 760px) {
+        body {
+          height: auto;
+        }
+        main {
+          flex-direction: column;
+        }
+        #app {
+          flex: none;
+        }
+        #panel {
+          flex: none;
+          height: 80vh;
+          border-left: 0;
+          border-top: 1px solid #ccc;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>runespect demo</strong> — a small shop, and the runespect panel showing it.
+      <a href="../">Back to the site</a>
+      <details>
+        <summary>Try this</summary>
+        <ul>
+          <li>Add to cart: a <code>CartLine</code> joins the tree; remove it and it leaves.</li>
+          <li>
+            Press <code>state</code> in the panel: <code>Footer</code>, which has no values, goes.
+          </li>
+          <li>
+            Pick <code>Quantity</code> and change <code>value</code>, a <code>$bindable</code> prop.
+          </li>
+          <li>Pick <code>Cart</code> and type <code>SPRING</code> as <code>coupon</code>.</li>
+          <li>
+            Check out: <code>Checkout</code> mounts, and the order lands in
+            <code>orders.svelte.ts</code>.
+          </li>
+        </ul>
+      </details>
+    </header>
+    <main>
+      <div id="app"></div>
+      <div id="panel"></div>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

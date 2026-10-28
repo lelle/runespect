@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": ["**/test/fixtures/**"],
+  "workspaces": {
+    "packages/extension": {
+      "entry": [
+        "src/background.ts",
+        "src/content.ts",
+        "src/content-main.ts",
+        "src/content-tier1.ts",
+        "src/devtools.ts"
+      ]
+    },
+    "apps/playground": {
+      "entry": ["panel.ts", "test/**/*.test.ts"]
+    },
+    ".": {
+      "entry": ["e2e/**/*.spec.ts", "e2e/*.ts", "scripts/*.ts"]
+    }
+  }
+}
