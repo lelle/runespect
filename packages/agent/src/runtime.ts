@@ -19,6 +19,7 @@ import {
   type HotChannel,
   type Subscribable,
 } from './internal.svelte';
+import { ownElement } from './dom';
 
 export interface SymbolSpec {
   kind: SymbolKind;
@@ -75,7 +76,14 @@ function register(
 }
 
 /** Called while a component starts. Registers it under its parent and leaves when it is destroyed. */
-export function component(descriptor: ComponentDescriptor): void {
+/**
+ * Called when a component starts. Returns the action the plugin puts on each element the component
+ * renders at its top level, which tells the agent the element is this instance's.
+ */
+export function component(descriptor: ComponentDescriptor): (el: Element) => { destroy(): void } {
+  let own =
+    (_el: Element): (() => void) =>
+    () => {};
   failOpen(descriptor.name, () => {
     const { name, loc, snippets, symbols } = descriptor;
     const kinds = kindsOf(symbols);
@@ -85,6 +93,7 @@ export function component(descriptor: ComponentDescriptor): void {
       ...(kinds ? { kinds } : {}),
     });
     setContext(PARENT, id);
+    own = (el) => ownElement(id, el);
     // onDestroy, not $effect: it puts no component into runes mode. The node leaves last, after its
     // stores let go, and even when registering failed halfway.
     try {
@@ -93,6 +102,7 @@ export function component(descriptor: ComponentDescriptor): void {
       onDestroy(() => leave(id));
     }
   });
+  return (el) => ({ destroy: own(el) });
 }
 
 /** Called when a .svelte.ts module runs. A module that runs again (HMR) replaces its node. */

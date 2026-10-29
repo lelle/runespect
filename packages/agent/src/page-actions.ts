@@ -1,4 +1,4 @@
-import { componentElement, elementForNode, nodeIdForElement } from './dom';
+import { boundsOf, componentElement, elementsForNode, nodeIdForElement } from './dom';
 import { allInOrder, find, onServer, read, readLive } from './tree.svelte';
 import { snap } from './snap.svelte';
 
@@ -9,15 +9,16 @@ let highlightBox: HTMLElement | null = null;
 // What the box is currently drawn over, and the listeners keeping it there. The box is
 // position:fixed with viewport coordinates, so every scroll — of the window or of any container
 // between the element and the root — moves the element out from under it.
-let highlightTarget: Element | null = null;
+let highlightTargets: Element[] = [];
 let stopTracking: (() => void) | null = null;
 
-function trackBox(el: Element): void {
-  highlightTarget = el;
-  showBox(el.getBoundingClientRect());
+function trackBox(elements: Element[]): void {
+  highlightTargets = elements;
+  showBox(boundsOf(elements)!);
   if (stopTracking) return; // already listening; the target just changed
   const reposition = (): void => {
-    if (highlightTarget) showBox(highlightTarget.getBoundingClientRect());
+    const bounds = boundsOf(highlightTargets);
+    if (bounds) showBox(bounds);
   };
   // Capture, because a scroll inside a container does not bubble to the window.
   window.addEventListener('scroll', reposition, true);
@@ -54,7 +55,7 @@ function showBox(rect: DOMRect): void {
 }
 function hideBox(): void {
   if (highlightBox) highlightBox.style.display = 'none';
-  highlightTarget = null;
+  highlightTargets = [];
   stopTracking?.();
 }
 
@@ -63,8 +64,8 @@ export function highlight(id: number | null): void {
   if (onServer()) return;
   if (id == null) return hideBox();
   const n = find(id);
-  const el = n ? elementForNode(n, allInOrder()) : null;
-  if (el) trackBox(el);
+  const elements = n ? elementsForNode(n, allInOrder()) : [];
+  if (elements.length) trackBox(elements);
   else hideBox();
 }
 
@@ -76,7 +77,7 @@ export function startPick(onPicked: (id: number | null) => void): void {
   stopPick();
   const onMove = (e: MouseEvent): void => {
     const comp = componentElement(e.target as Element);
-    if (comp) trackBox(comp);
+    if (comp) trackBox([comp]);
     else hideBox();
   };
   const onClick = (e: MouseEvent): void => {

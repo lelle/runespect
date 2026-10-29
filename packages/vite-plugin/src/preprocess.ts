@@ -100,6 +100,10 @@ export function instrumentComponent(
   // Use MagicString so line numbers in the original source survive the insertions —
   // the returned sourcemap keeps debugging/errors pointing at the real lines.
   const s = new MagicString(content);
+  for (const el of topLevelElements(ast.fragment)) {
+    const end = el.attributes.at(-1)?.end ?? el.start + 1 + el.name.length;
+    s.appendLeft(end, ` use:${OWN_ELEMENT}`);
+  }
   if (instance) {
     s.appendLeft(instance.content.start, imports);
     s.appendLeft(instance.content.end, instrument);
@@ -114,6 +118,23 @@ export function instrumentComponent(
   };
 }
 
+// The action the agent hands each instance, put on every element the instance renders at its top
+// level so the agent knows whose element it is.
+const OWN_ELEMENT = '__runespect_el';
+
+// The elements of a component's markup that are not inside another of its elements: in blocks, in
+// snippets and in what it passes to a child, which are its own markup wherever they render.
+// <svelte:head> is left out: what it renders is not part of the page the panel points at.
+function topLevelElements(fragment: any): any[] {
+  return (fragment?.nodes ?? []).flatMap((node: any) => {
+    if (node.type === 'RegularElement' || node.type === 'SvelteElement') return [node];
+    if (node.type === 'SvelteHead') return [];
+    return Object.values(node)
+      .filter((value: any) => value?.type === 'Fragment')
+      .flatMap(topLevelElements);
+  });
+}
+
 function buildInstrument(
   componentName: string,
   symbols: FoundSymbol[],
@@ -126,5 +147,5 @@ function buildInstrument(
     ...(snippets.length ? [`snippets: ${JSON.stringify(snippets)}`] : []),
     `symbols: ${symbolsSource(symbols)}`,
   ];
-  return `\n\n// ── injected by @runespect/vite-plugin ──\n${agentCall('component', `{ ${descriptor.join(', ')} }`)};\n`;
+  return `\n\n// ── injected by @runespect/vite-plugin ──\nconst ${OWN_ELEMENT} = ${agentCall('component', `{ ${descriptor.join(', ')} }`)};\n`;
 }

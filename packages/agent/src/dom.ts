@@ -96,6 +96,46 @@ function fileOfNode(
   return undefined;
 }
 
+// The elements each instance renders at its top level, as the instrumentation reports them: an
+// element knows its node, so neither the file nor the position has to be guessed. Once a page
+// reports any, they decide; the guess above is for markup nothing reports.
+let owner = new WeakMap<Element, number>();
+let rendered = new Map<number, Set<Element>>();
+
+/** Records that the instance of node `id` rendered `el`; the returned function forgets it. */
+export function ownElement(id: number, el: Element): () => void {
+  owner.set(el, id);
+  const own = rendered.get(id) ?? new Set();
+  rendered.set(id, own.add(el));
+  return () => {
+    if (owner.get(el) === id) owner.delete(el);
+    own.delete(el);
+    if (!own.size && rendered.get(id) === own) rendered.delete(id);
+  };
+}
+
+export function resetElements(): void {
+  owner = new WeakMap();
+  rendered = new Map();
+}
+
+const reporting = (): boolean => rendered.size > 0;
+
+const inDomOrder = (a: Element, b: Element): number =>
+  a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+
+function reportedNodeOf(el: Element | null, nodes: ReadonlyArray<LocNode>): number | null {
+  for (let cur = el; cur; cur = cur.parentElement) {
+    const id = owner.get(cur);
+    if (id !== undefined) return nodes.some((n) => n.id === id) ? id : null;
+  }
+  return null;
+}
+
+function reportedElementsOf(node: LocNode, root: ParentNode): Element[] {
+  return [...(rendered.get(node.id) ?? [])].filter((el) => root.contains(el)).sort(inDomOrder);
+}
+
 // A hovered DOM element → the id of the node it belongs to. Disambiguates repeated component
 // types by the element's instance position (falls back to the first peer when position is
 // unknown, e.g. the element isn't under `root`).
@@ -104,6 +144,7 @@ export function nodeIdForElement(
   nodes: ReadonlyArray<LocNode>,
   root: ParentNode = document,
 ): number | null {
+  if (reporting()) return reportedNodeOf(el, nodes);
   const comp = componentElement(el);
   const file = comp ? metaFile(comp) : undefined;
   if (!comp || !file) return null;
@@ -122,10 +163,33 @@ export function elementForNode(
   nodes: ReadonlyArray<LocNode>,
   root: ParentNode = document,
 ): Element | null {
+  if (node && reporting()) return reportedElementsOf(node, root)[0] ?? null;
   if (!node?.loc) return null;
   const file = fileOfNode(node, nodes, root);
   if (!file) return null;
   const roots = instanceRoots(file, root);
   const idx = nodesOfFile(file, nodes).indexOf(node);
   return (idx >= 0 ? roots[idx] : undefined) ?? roots[0] ?? null;
+}
+
+/** Every element a node's instance renders at its top level, in DOM order. */
+export function elementsForNode(
+  node: LocNode | null | undefined,
+  nodes: ReadonlyArray<LocNode>,
+  root: ParentNode = document,
+): Element[] {
+  if (node && reporting()) return reportedElementsOf(node, root);
+  const el = elementForNode(node, nodes, root);
+  return el ? [el] : [];
+}
+
+/** The smallest rectangle around `elements`, in viewport coordinates; null for none. */
+export function boundsOf(elements: ReadonlyArray<Element>): DOMRect | null {
+  const rects = elements.map((el) => el.getBoundingClientRect());
+  if (rects.length < 2) return rects[0] ?? null;
+  const left = Math.min(...rects.map((r) => r.left));
+  const top = Math.min(...rects.map((r) => r.top));
+  const right = Math.max(...rects.map((r) => r.left + r.width));
+  const bottom = Math.max(...rects.map((r) => r.top + r.height));
+  return new DOMRect(left, top, right - left, bottom - top);
 }
