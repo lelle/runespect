@@ -8,5 +8,12 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "privatePackages": { "version": true, "tag": true },
-  "ignore": ["playground", "sveltekit-spa", "@runespect/proxy", "@runespect/prod-reader"]
+  "ignore": [
+    "playground",
+    "sveltekit-spa",
+    "demo",
+    "site",
+    "@runespect/proxy",
+    "@runespect/prod-reader"
+  ]
 }
