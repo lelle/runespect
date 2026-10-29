@@ -31,8 +31,10 @@ that hurts someone goes out at once, smaller things are gathered. There is no fi
 
 1. Changes land on `main` with their changesets.
 2. The Release workflow opens or updates the "chore: version packages" pull request, which bumps the
-   versions and writes each package's `CHANGELOG.md`. A pull request the workflow opens starts no
-   CI of its own: close and reopen it to run the checks, or merge it as an admin.
+   versions and writes each package's `CHANGELOG.md`. CI on the workflow's commits waits for
+   approval: approve the run in the pull request's checks (or
+   `gh api -X POST repos/lelle/runespect/actions/runs/<run-id>/approve`). Each new change on `main`
+   updates the pull request, and its run waits again.
 3. Merging it starts the publish job, which waits for approval in the `Release` environment and
    then publishes to npm with provenance through trusted publishing (OIDC). Approve or cancel it
    right away: a waiting publish holds every later release run.
