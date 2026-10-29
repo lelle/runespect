@@ -10,6 +10,7 @@ import {
 } from '@runespect/agent/protocol/internal';
 import { panelAssetPath, panelContentType, panelRedirect } from './panel-route.ts';
 import { AGENT_RUNTIME, DEV_SERVER_FLAG, agentCall } from './instrument.ts';
+import { uiVersionProblem } from './ui-version.ts';
 import { instrumentModule } from './module-state.ts';
 
 // runespect() starts the agent in the page, brokers its messages to the panel window over Vite's
@@ -64,6 +65,8 @@ export function runespect(options: RunespectOptions = {}): Plugin {
         if (config.plugins.some((p) => p.name === 'vite-plugin-sveltekit-setup')) {
           delete plugin.transformIndexHtml;
         }
+        const problem = uiVersionProblem(config.root);
+        if (problem) config.logger.warn(problem);
       },
     },
     closeBundle() {

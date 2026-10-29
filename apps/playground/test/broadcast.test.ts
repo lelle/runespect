@@ -5,6 +5,7 @@ import { runespect } from '@runespect/vite-plugin';
 import App from '../src/App.svelte';
 import { openPanel } from './helpers/agent';
 import { requestMessage } from '@runespect/agent/protocol/internal';
+import { tmpdir } from 'node:os';
 
 let stop: (() => void) | undefined;
 beforeEach(() => agent.reset());
@@ -75,6 +76,9 @@ test('runespect({ openInEditor: false }) starts the page with Open in editor off
   expect(await load(runespect())).not.toContain('openInEditor');
 });
 
+// What every resolved config has; the app root has no @runespect/ui to compare.
+const viteConfig = { root: tmpdir(), logger: { warn: () => {} } };
+
 // SvelteKit 3 warns about any plugin that has a transformIndexHtml hook, from its own
 // configResolved. Under Kit the hook is dead weight (the broadcast goes in through the client
 // entry), so the plugin drops it — and must do so before Kit looks.
@@ -82,13 +86,16 @@ test('under SvelteKit, runespect() drops its transformIndexHtml before SvelteKit
   const plugin: any = runespect();
   expect(plugin.configResolved.order).toBe('pre');
 
-  plugin.configResolved.handler({ plugins: [{ name: 'vite-plugin-sveltekit-setup' }, plugin] });
+  plugin.configResolved.handler({
+    ...viteConfig,
+    plugins: [{ name: 'vite-plugin-sveltekit-setup' }, plugin],
+  });
   expect(plugin.transformIndexHtml).toBeUndefined();
 });
 
 test('without SvelteKit, runespect() keeps its transformIndexHtml', () => {
   const plugin: any = runespect();
-  plugin.configResolved.handler({ plugins: [{ name: 'vite:svelte' }, plugin] });
+  plugin.configResolved.handler({ ...viteConfig, plugins: [{ name: 'vite:svelte' }, plugin] });
   expect(plugin.transformIndexHtml.handler).toBeTypeOf('function');
 });
 
