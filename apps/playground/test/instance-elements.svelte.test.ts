@@ -138,3 +138,64 @@ test("the overlay's highlight covers every element of the instance too", () => {
     '10px 50px 110px 20px',
   );
 });
+
+const pageBox = () => document.querySelector('[data-runespect-highlight]') as HTMLElement;
+
+test('while picking, the box covers the instance a click picks, named', () => {
+  layOutSecondRow();
+  agent.startPick(() => {});
+
+  document
+    .querySelectorAll('li')[1]
+    .querySelector('b')!
+    .dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+
+  expect(boxOf(pageBox())).toBe('10px 50px 110px 20px');
+  expect(pageBox().textContent).toBe('Row');
+});
+
+// A library's component is compiled by Svelte too, so its elements are tagged, but nothing
+// instrumented renders them: a click there picks nothing.
+test('while picking, an element no instance owns gets no box', () => {
+  agent.startPick(() => {});
+  const library = document.body.appendChild(document.createElement('p'));
+  (library as unknown as { __svelte_meta: unknown }).__svelte_meta = {
+    loc: { file: 'node_modules/lib/Widget.svelte' },
+  };
+
+  document
+    .querySelectorAll('li')[1]
+    .querySelector('b')!
+    .dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+  library.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+
+  expect(pageBox().style.display).toBe('none');
+});
+
+test('the highlight from the tree is named too', () => {
+  agent.highlight(rows()[1].id);
+
+  expect(pageBox().textContent).toBe('Row');
+});
+
+test('while picking in the overlay, the box covers the instance a click picks, named', () => {
+  layOutSecondRow();
+  const target = document.body.appendChild(document.createElement('div'));
+  mount(Inspect, { target });
+  flushSync();
+  const overlay = target.querySelector('[data-testid="runespect-overlay-host"]')!.shadowRoot!;
+  const pick = overlay.querySelector('[data-testid="runespect-pick"]') as HTMLButtonElement;
+  pick.click();
+  flushSync();
+
+  document
+    .querySelectorAll('li')[1]
+    .querySelector('b')!
+    .dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+  flushSync();
+
+  const highlight = overlay.querySelector('[data-testid="runespect-highlight"]') as HTMLElement;
+  expect(boxOf(highlight)).toBe('10px 50px 110px 20px');
+  expect(highlight.textContent).toBe('Row');
+  pick.click();
+});
