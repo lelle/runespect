@@ -84,11 +84,16 @@ export function runespect(options: RunespectOptions = {}): Plugin {
     // The agent is this plugin's dependency, not necessarily the app's, yet the injected code
     // imports it from the app's own files. It is resolved from here, so there is one agent and it
     // is always the version this plugin was released with: the runtime the injected code calls,
-    // the internals the overlay reads, and the public entry all reach the same module.
-    async resolveId(id: string, _importer?: string, options?: object) {
-      if (id === VIRTUAL) return RESOLVED;
-      if (!AGENT_ENTRIES.has(id)) return;
-      return this.resolve(id, fileURLToPath(import.meta.url), { ...options, skipSelf: true });
+    // the internals the overlay reads, and the public entry all reach the same module. Before
+    // Vite's own resolver, which would hand each importer the agent nearest it: a second one when
+    // the app's @runespect/ui is another version and brought its own.
+    resolveId: {
+      order: 'pre',
+      async handler(id: string, _importer?: string, options?: object) {
+        if (id === VIRTUAL) return RESOLVED;
+        if (!AGENT_ENTRIES.has(id)) return;
+        return this.resolve(id, fileURLToPath(import.meta.url), { ...options, skipSelf: true });
+      },
     },
     load(id: string) {
       if (id !== RESOLVED) return;
