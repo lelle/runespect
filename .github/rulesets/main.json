@@ -26,7 +26,8 @@
         "required_status_checks": [
           { "context": "commits" },
           { "context": "quality" },
-          { "context": "e2e" }
+          { "context": "e2e" },
+          { "context": "changeset" }
         ]
       }
     }
