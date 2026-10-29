@@ -24,6 +24,8 @@ export {
   boundsOf,
 } from './dom';
 export { snap } from './snap.svelte';
+// What the overlay checks itself against: @runespect/ui only works next to its own version.
+export { version } from '../package.json';
 export {
   enter,
   enterModule,

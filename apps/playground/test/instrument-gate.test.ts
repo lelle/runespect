@@ -2,6 +2,7 @@ import { test, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ResolvedConfig } from 'vite';
 import path from 'node:path';
 import { runespectPreprocess, runespect } from '@runespect/vite-plugin';
+import { tmpdir } from 'node:os';
 
 // The playground's own directory, wherever the test runner was started from.
 const PLAYGROUND = path.join(import.meta.dirname, '..');
@@ -12,7 +13,12 @@ const instruments = (options?: Parameters<typeof runespectPreprocess>[0]) =>
 
 function startDevServer(): void {
   const hook = runespect().configResolved as { handler: (config: ResolvedConfig) => void };
-  hook.handler({ command: 'serve', plugins: [] } as unknown as ResolvedConfig);
+  hook.handler({
+    command: 'serve',
+    plugins: [],
+    root: tmpdir(),
+    logger: { warn: () => {} },
+  } as unknown as ResolvedConfig);
 }
 
 beforeEach(() => {
