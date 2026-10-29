@@ -51,13 +51,13 @@
   let selectedId = $state<number | null>(null);
   // The rect is rendered position:fixed, so it has to be recomputed whenever the page moves under
   // it — otherwise the outline stays where the element used to be as soon as you scroll. Keeping
-  // the element (not just its rect) is what makes that possible.
-  let hoverEl: Element | null = null;
+  // the elements (not just their rect) is what makes that possible.
+  let hoverEls: Element[] = [];
   let hoverRect = $state<DOMRect | null>(null);
   $effect(() => {
     if (!hoverRect) return;
     const reposition = (): void => {
-      if (hoverEl) hoverRect = hoverEl.getBoundingClientRect();
+      hoverRect = agent.boundsOf(hoverEls);
     };
     // Capture: a scroll inside a container does not bubble to the window.
     window.addEventListener('scroll', reposition, true);
@@ -67,15 +67,15 @@
       window.removeEventListener('resize', reposition);
     };
   });
-  function highlightEl(el: Element | null): void {
-    hoverEl = el;
-    hoverRect = el ? el.getBoundingClientRect() : null;
+  function highlightEls(elements: Element[]): void {
+    hoverEls = elements;
+    hoverRect = agent.boundsOf(elements);
   }
   let overlayEl: HTMLElement | undefined = $state();
 
   function stopPicking(): void {
     picking = false;
-    highlightEl(null);
+    highlightEls([]);
   }
 
   // The picker listens on the document, where an event from inside the overlay's shadow root
@@ -85,11 +85,11 @@
   function onMove(e: MouseEvent): void {
     const target = e.target as Element;
     if (inOverlay(e)) {
-      highlightEl(null);
+      highlightEls([]);
       return;
     }
     const comp = agent.componentElement(target);
-    highlightEl(comp);
+    highlightEls(comp ? [comp] : []);
   }
 
   function onClick(e: MouseEvent): void {
@@ -110,11 +110,11 @@
   // Reverse of the picker: hovering a tree node highlights its element in the page.
   function highlightNode(id: number | null): void {
     if (id == null) {
-      if (!picking) highlightEl(null);
+      if (!picking) highlightEls([]);
       return;
     }
     const node = nodes.find((n) => n.id === id);
-    highlightEl(agent.elementForNode(node, nodes) ?? null);
+    highlightEls(agent.elementsForNode(node, nodes));
   }
 
   $effect(() => {

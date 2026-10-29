@@ -14,8 +14,15 @@ import { resetWire } from './wire.svelte';
 import { resetObserve } from './observe';
 import { resetPageActions } from './page-actions';
 import { resetTransport } from './transport.svelte';
+import { resetElements } from './dom';
 
-export { componentElement, nodeIdForElement, elementForNode } from './dom';
+export {
+  componentElement,
+  nodeIdForElement,
+  elementForNode,
+  elementsForNode,
+  boundsOf,
+} from './dom';
 export { snap } from './snap.svelte';
 export {
   enter,
@@ -58,4 +65,5 @@ export function reset(): void {
   resetHistory();
   resetWire();
   resetTree();
+  resetElements();
 }
