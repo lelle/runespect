@@ -105,3 +105,9 @@ commit in the pull request therefore lands on `main` as it is and must follow th
   hand, run `git config core.hooksPath .githooks`.
 - **In CI** it checks every commit in a pull request, and rejects merge commits and unsquashed
   `fixup!` commits.
+
+## Releases
+
+A change to `agent`, `ui`, `vite-plugin` or `extension` brings a changeset (`pnpm changeset`, or
+`pnpm changeset --empty` when users will not notice); CI checks it. Which bump to choose, when a
+release happens and how it is published: [`.changeset/README.md`](./.changeset/README.md).

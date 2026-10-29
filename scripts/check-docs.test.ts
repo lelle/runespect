@@ -118,7 +118,11 @@ const markdown = (): Map<string, string> =>
     })
       .trim()
       .split('\n')
-      .filter((file) => existsSync(file) && !file.startsWith('.changeset/'))
+      // The changesets are release notes in waiting; the README next to them is documentation.
+      .filter(
+        (file) =>
+          existsSync(file) && (!file.startsWith('.changeset/') || file === '.changeset/README.md'),
+      )
       .map((file) => [file, readFileSync(file, 'utf8')]),
   );
 
