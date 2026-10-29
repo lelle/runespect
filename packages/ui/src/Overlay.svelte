@@ -54,6 +54,7 @@
   // the elements (not just their rect) is what makes that possible.
   let hoverEls: Element[] = [];
   let hoverRect = $state<DOMRect | null>(null);
+  let hoverName = $state('');
   $effect(() => {
     if (!hoverRect) return;
     const reposition = (): void => {
@@ -67,9 +68,16 @@
       window.removeEventListener('resize', reposition);
     };
   });
-  function highlightEls(elements: Element[]): void {
+  function highlightEls(elements: Element[], name = ''): void {
     hoverEls = elements;
     hoverRect = agent.boundsOf(elements);
+    hoverName = name;
+  }
+
+  // Every element of a node's instance, named; nothing when it has none in the page.
+  function highlightInstance(id: number | null): void {
+    const node = id == null ? undefined : nodes.find((n) => n.id === id);
+    highlightEls(node ? agent.elementsForNode(node, nodes) : [], node?.name);
   }
   let overlayEl: HTMLElement | undefined = $state();
 
@@ -88,8 +96,8 @@
       highlightEls([]);
       return;
     }
-    const comp = agent.componentElement(target);
-    highlightEls(comp ? [comp] : []);
+    // What a click here would pick: the instance, not the element under the pointer.
+    highlightInstance(agent.nodeIdForElement(target, nodes));
   }
 
   function onClick(e: MouseEvent): void {
@@ -113,8 +121,7 @@
       if (!picking) highlightEls([]);
       return;
     }
-    const node = nodes.find((n) => n.id === id);
-    highlightEls(agent.elementsForNode(node, nodes));
+    highlightInstance(id);
   }
 
   $effect(() => {
@@ -226,7 +233,10 @@
     class="rs-pick-highlight"
     data-testid="runespect-highlight"
     style="top:{hoverRect.top}px;left:{hoverRect.left}px;width:{hoverRect.width}px;height:{hoverRect.height}px;"
-  ></div>
+  >
+    {#if hoverName}<span class="rs-pick-label" class:inside={hoverRect.top < 16}>{hoverName}</span
+      >{/if}
+  </div>
 {/if}
 
 <style>
@@ -302,5 +312,21 @@
     background: rgba(194, 65, 12, 0.2);
     outline: 2px solid #c2410c;
     z-index: 2147483646;
+  }
+  /* The component's name, on the box's top edge, or just inside it at the top of the viewport. */
+  .rs-pick-label {
+    position: absolute;
+    top: -16px;
+    left: -2px;
+    padding: 1px 4px;
+    background: #c2410c;
+    color: #fff;
+    font:
+      11px/14px system-ui,
+      sans-serif;
+    white-space: nowrap;
+  }
+  .rs-pick-label.inside {
+    top: 0;
   }
 </style>

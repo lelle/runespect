@@ -1,4 +1,4 @@
-import { boundsOf, componentElement, elementsForNode, nodeIdForElement } from './dom';
+import { boundsOf, elementsForNode, nodeIdForElement } from './dom';
 import { allInOrder, find, onServer, read, readLive } from './tree.svelte';
 import { snap } from './snap.svelte';
 
@@ -6,15 +6,18 @@ import { snap } from './snap.svelte';
 // agent performs them here. These also work standalone on any plugin page (no overlay needed).
 
 let highlightBox: HTMLElement | null = null;
+// The component's name, on the box's top edge, or just inside it at the top of the viewport.
+let highlightLabel: HTMLElement | null = null;
 // What the box is currently drawn over, and the listeners keeping it there. The box is
 // position:fixed with viewport coordinates, so every scroll — of the window or of any container
 // between the element and the root — moves the element out from under it.
 let highlightTargets: Element[] = [];
 let stopTracking: (() => void) | null = null;
 
-function trackBox(elements: Element[]): void {
+function trackBox(elements: Element[], name: string): void {
   highlightTargets = elements;
   showBox(boundsOf(elements)!);
+  highlightLabel!.textContent = name;
   if (stopTracking) return; // already listening; the target just changed
   const reposition = (): void => {
     const bounds = boundsOf(highlightTargets);
@@ -43,8 +46,19 @@ function showBox(rect: DOMRect): void {
       outline: '2px solid #c2410c',
       zIndex: '2147483646',
     });
+    highlightLabel = highlightBox.appendChild(document.createElement('span'));
+    Object.assign(highlightLabel.style, {
+      position: 'absolute',
+      left: '-2px',
+      padding: '1px 4px',
+      background: '#c2410c',
+      color: '#fff',
+      font: '11px/14px system-ui, sans-serif',
+      whiteSpace: 'nowrap',
+    });
     document.body.appendChild(highlightBox);
   }
+  highlightLabel!.style.top = rect.top < 16 ? '0' : '-16px';
   Object.assign(highlightBox.style, {
     display: 'block',
     top: `${rect.top}px`,
@@ -63,9 +77,13 @@ function hideBox(): void {
 export function highlight(id: number | null): void {
   if (onServer()) return;
   if (id == null) return hideBox();
-  const n = find(id);
-  const elements = n ? elementsForNode(n, allInOrder()) : [];
-  if (elements.length) trackBox(elements);
+  boxNode(find(id));
+}
+
+// The box over every element of `node`'s instance, named; off when it has none in the page.
+function boxNode(node: ReturnType<typeof find>): void {
+  const elements = node ? elementsForNode(node, allInOrder()) : [];
+  if (node && elements.length) trackBox(elements, node.name);
   else hideBox();
 }
 
@@ -75,10 +93,10 @@ let pickStop: (() => void) | null = null;
 export function startPick(onPicked: (id: number | null) => void): void {
   if (onServer()) return;
   stopPick();
+  // The box shows what a click here would pick: the instance, not the element under the pointer.
   const onMove = (e: MouseEvent): void => {
-    const comp = componentElement(e.target as Element);
-    if (comp) trackBox([comp]);
-    else hideBox();
+    const id = nodeIdForElement(e.target as Element, allInOrder());
+    boxNode(id == null ? undefined : find(id));
   };
   const onClick = (e: MouseEvent): void => {
     e.preventDefault();
