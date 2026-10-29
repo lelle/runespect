@@ -62,7 +62,7 @@ test('runespect() vite plugin serves a dev-only broadcast virtual module', async
   expect(tags[0].attrs.src).toContain('runespect-broadcast');
 
   // the virtual module resolves + loads to the broadcast call
-  const resolved = await plugin.resolveId('virtual:runespect-broadcast');
+  const resolved = await plugin.resolveId.handler('virtual:runespect-broadcast');
   expect(resolved).toBeTruthy();
   const code = plugin.load(resolved);
   expect(code).toContain('from "@runespect/agent/runtime"');
@@ -71,7 +71,7 @@ test('runespect() vite plugin serves a dev-only broadcast virtual module', async
 
 test('runespect({ openInEditor: false }) starts the page with Open in editor off', async () => {
   const load = async (plugin: any) =>
-    plugin.load(await plugin.resolveId('virtual:runespect-broadcast'));
+    plugin.load(await plugin.resolveId.handler('virtual:runespect-broadcast'));
   expect(await load(runespect({ openInEditor: false }))).toContain('openInEditor: false');
   expect(await load(runespect())).not.toContain('openInEditor');
 });

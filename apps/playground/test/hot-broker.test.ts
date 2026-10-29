@@ -85,7 +85,7 @@ test('the broker forwards only the kinds of message the protocol has', () => {
 // hot transport, the app only ever broadcasts to window.postMessage (the extension's path).
 test('the injected module hands the page its hot channel', async () => {
   const plugin = runespect() as any;
-  const code = plugin.load(await plugin.resolveId('virtual:runespect-broadcast'));
+  const code = plugin.load(await plugin.resolveId.handler('virtual:runespect-broadcast'));
 
   expect(code).toContain('start({ hot: import.meta.hot })');
 });
