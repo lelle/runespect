@@ -200,6 +200,25 @@ test('component names are open-in-editor links', async ({ page }) => {
   expect(await link.getAttribute('href')).toMatch(/^vscode:\/\/file\/.*Counter\.svelte:\d+$/);
 });
 
+test('a value flashes in the shape of the selection, and its text stays where it was', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const value = page.locator('[data-value="Counter.doubled"]').first();
+  const before = await value.boundingBox();
+
+  await page.locator('#app button').first().click();
+  await expect(value).toHaveClass(/rs-flash/);
+
+  const flashing = await value.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { radius: s.borderRadius, pad: s.paddingLeft, margin: s.marginLeft };
+  });
+  const after = await value.boundingBox();
+  expect(flashing).toEqual({ radius: '6px', pad: '5px', margin: '-5px' });
+  expect(after!.x + 5).toBeCloseTo(before!.x, 0);
+});
+
 test('a changed value flashes in the overlay (flash-on-update)', async ({ page }) => {
   await page.goto('/');
   const countInput = page.locator('[data-edit="Counter.count"]').first();

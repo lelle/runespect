@@ -61,6 +61,25 @@ test('the state filter hides the components that have no values', async ({ page 
   await expect(footer).toHaveCount(1);
 });
 
+// A flat row clips what is outside it: an outline around the name would lose its top and bottom.
+test('the frame of a selected name fits inside its row, and the name stays where it was', async ({
+  page,
+}) => {
+  await page.goto(DEMO);
+  const name = page.locator('#panel [data-select]').nth(1);
+  const before = await name.boundingBox();
+
+  await name.click();
+
+  const selected = page.locator('#panel .rs-selected > .name');
+  const frame = await selected.boundingBox();
+  const row = await page.locator('#panel .rs-selected').boundingBox();
+  expect(frame!.y).toBeGreaterThanOrEqual(row!.y);
+  expect(frame!.y + frame!.height).toBeLessThanOrEqual(row!.y + row!.height);
+  expect(await selected.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none');
+  expect(frame!.x + 5).toBeCloseTo(before!.x, 0);
+});
+
 test('a $bindable prop edited in the panel changes its parent', async ({ page }) => {
   await page.goto(DEMO);
   await page.locator('#panel [data-select="Quantity"]').first().click();

@@ -105,6 +105,11 @@
   }
   .rs-flash {
     animation: rs-flash 0.7s ease-out;
+    border-radius: var(--rs-mark-radius);
+  }
+  .rs-value.rs-flash {
+    margin: 0 calc(-1 * var(--rs-mark-pad));
+    padding: var(--rs-mark-pad-block) var(--rs-mark-pad);
   }
   .rs-flash-again {
     animation-name: rs-flash-again;
