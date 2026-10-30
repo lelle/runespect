@@ -501,6 +501,7 @@
     content: '';
     position: absolute;
     inset: 0;
+    background: color-mix(in srgb, var(--rs-accent) 12%, transparent);
     border-radius: inherit;
     box-shadow: inset 0 0 0 1px var(--rs-accent);
     pointer-events: none;
@@ -509,12 +510,10 @@
   @keyframes rs-selected-pulse {
     0%,
     100% {
-      background: transparent;
-      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rs-accent) 30%, transparent);
+      opacity: 0.3;
     }
     50% {
-      background: color-mix(in srgb, var(--rs-accent) 12%, transparent);
-      box-shadow: inset 0 0 0 1px var(--rs-accent);
+      opacity: 1;
     }
   }
   @media (prefers-reduced-motion: reduce) {

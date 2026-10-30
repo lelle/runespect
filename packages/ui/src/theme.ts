@@ -46,7 +46,6 @@ export function resolveTheme(theme: ThemeSetting, systemDark: boolean): Resolved
   return theme;
 }
 
-// A CSS declaration string for the root element's `style` attribute, setting every --rs-* var.
 // The shape a selected name and a flash share. The same in every theme.
 const SHAPE: Record<string, string> = {
   '--rs-mark-radius': '6px',
@@ -54,6 +53,7 @@ const SHAPE: Record<string, string> = {
   '--rs-mark-pad-block': '2px',
 };
 
+// A CSS declaration string for the root element's `style` attribute, setting every --rs-* var.
 export function themeStyle(resolved: ResolvedTheme): string {
   return Object.entries({ ...VARS[resolved], ...SHAPE })
     .map(([k, v]) => `${k}:${v}`)
