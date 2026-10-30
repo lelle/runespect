@@ -1,6 +1,6 @@
 {
   "name": "@runespect/vite-plugin",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "type": "module",
   "description": "Vite plugin and Svelte preprocessor that instrument Svelte 5 components for runespect and serve its panel",
