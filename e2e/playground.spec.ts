@@ -225,6 +225,22 @@ test('a value that changes again flashes again, however often it changes', async
   }
 });
 
+for (const [surface, url] of [
+  ['the overlay', '/'],
+  ['the panel window', '/__runespect/?source=/'],
+]) {
+  test(`the settings button lines up with the rest of the toolbar in ${surface}`, async ({
+    page,
+  }) => {
+    await page.goto(url);
+    const gear = await page.getByTestId('runespect-settings').boundingBox();
+    const pick = await page.getByTestId('runespect-pick').boundingBox();
+
+    expect(gear?.y).toBe(pick?.y);
+    expect(gear?.height).toBe(pick?.height);
+  });
+}
+
 test('settings: turning off "Flash on update" suppresses the value blink', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear()); // start from the default (flash on)
