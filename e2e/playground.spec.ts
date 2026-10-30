@@ -204,6 +204,27 @@ test('a changed value flashes in the overlay (flash-on-update)', async ({ page }
   await expect(countInput).toHaveClass(/rs-flash/);
 });
 
+// A CSS animation only starts when its name changes: without that, a value changing again mid-blink
+// would finish the first blink, and one changing all the time would show nothing at all.
+test('a value that changes again flashes again, however often it changes', async ({ page }) => {
+  await page.goto('/');
+  const countInput = page.locator('[data-edit="Counter.count"]').first();
+  await expect(countInput).toBeVisible();
+  const button = page.locator('#app button').first();
+  await button.click();
+
+  for (let change = 0; change < 5; change++) {
+    await page.waitForTimeout(300);
+    await button.click();
+    const progress = await countInput.evaluate((el) => {
+      const [animation] = el.getAnimations();
+      return animation?.playState === 'running' ? Number(animation.currentTime) : -1;
+    });
+    expect(progress).toBeGreaterThanOrEqual(0);
+    expect(progress).toBeLessThan(250);
+  }
+});
+
 test('settings: turning off "Flash on update" suppresses the value blink', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear()); // start from the default (flash on)

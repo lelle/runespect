@@ -252,6 +252,7 @@
             {sym}
             {val}
             flashing={flash && flasher.isFlashing(node.id, sym)}
+            flashAgain={flasher.flashAgain(node.id, sym)}
             defaultExpanded={expandValues}
             {onEdit}
             {onInspect}
@@ -331,6 +332,7 @@
         class="name name-btn name-select"
         tabindex="-1"
         class:rs-flash={flash && flasher.nodeFlashing(node.id)}
+        class:rs-flash-again={flasher.nodeFlashAgain(node.id)}
         data-select={node.name}
         onclick={(e) =>
           onSelect((e.metaKey || e.ctrlKey) && node.id === selectedId ? null : node.id)}
@@ -487,7 +489,19 @@
   .rs-flash {
     animation: rs-flash 0.7s ease-out;
   }
+  .rs-flash-again {
+    animation-name: rs-flash-again;
+  }
   @keyframes rs-flash {
+    from {
+      background: var(--rs-accent);
+      color: var(--rs-on-accent);
+    }
+    to {
+      background: transparent;
+    }
+  }
+  @keyframes rs-flash-again {
     from {
       background: var(--rs-accent);
       color: var(--rs-on-accent);

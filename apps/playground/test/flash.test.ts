@@ -32,6 +32,36 @@ test('Flasher: first sight is calm; a changed symbol flashes, then clears after 
   }
 });
 
+test('Flasher: each change turns the flash, so the animation starts over', () => {
+  vi.useFakeTimers();
+  try {
+    const f = new Flasher();
+    f.update([flNode({ count: 1, other: 1 })]);
+    f.update([flNode({ count: 2, other: 1 })]);
+    expect(f.flashAgain(1, 'count')).toBe(false);
+    expect(f.nodeFlashAgain(1)).toBe(false);
+
+    f.update([flNode({ count: 3, other: 1 })]);
+    expect(f.flashAgain(1, 'count')).toBe(true);
+    expect(f.flashAgain(1, 'other')).toBe(false);
+    expect(f.nodeFlashAgain(1)).toBe(true);
+
+    f.update([flNode({ count: 3, other: 1 })]); // nothing changed: the blink runs on
+    expect(f.flashAgain(1, 'count')).toBe(true);
+
+    f.update([flNode({ count: 4, other: 2 })]); // two values, one node name: it still turns once
+    expect(f.flashAgain(1, 'count')).toBe(false);
+    expect(f.nodeFlashAgain(1)).toBe(false);
+
+    vi.advanceTimersByTime(700);
+    f.update([flNode({ count: 5, other: 2 })]);
+    expect(f.flashAgain(1, 'count')).toBe(false);
+    f.destroy();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 // Pure flash-diff logic.
 test('changedKeys: first sight never flashes', () => {
   expect(changedKeys(undefined, { count: 1 })).toEqual([]);

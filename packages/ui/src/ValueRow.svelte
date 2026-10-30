@@ -15,6 +15,7 @@
     sym,
     val,
     flashing = false,
+    flashAgain = false,
     defaultExpanded = false,
     onEdit = () => {},
     onInspect = () => {},
@@ -25,6 +26,8 @@
     sym: string;
     val: unknown;
     flashing?: boolean;
+    /** Which of two identical animations to run: a change mid-blink starts it over. */
+    flashAgain?: boolean;
     defaultExpanded?: boolean;
     onEdit?: (id: number, symbol: string, path: (string | number)[], value: unknown) => void;
     onInspect?: (id: number, symbol: string, path: (string | number)[], limit?: number) => void;
@@ -43,6 +46,7 @@
   <span
     class="rs-value"
     class:rs-flash={flashing}
+    class:rs-flash-again={flashAgain}
     {...{ [editAttr]: id, 'data-type': valueType(val) }}
   >
     <ValueView
@@ -58,6 +62,7 @@
     type="checkbox"
     class="rs-edit"
     class:rs-flash={flashing}
+    class:rs-flash-again={flashAgain}
     {...{ [editAttr]: id }}
     checked={val}
     onchange={(e) => onEdit(node.id, sym, [], e.currentTarget.checked)}
@@ -66,6 +71,7 @@
   <input
     class="rs-edit"
     class:rs-flash={flashing}
+    class:rs-flash-again={flashAgain}
     {...{ [editAttr]: id }}
     value={formatValue(val)}
     oninput={(e) => onEdit(node.id, sym, [], coerceInput(val, e.currentTarget.value))}
@@ -74,6 +80,7 @@
   <span
     class="rs-value"
     class:rs-flash={flashing}
+    class:rs-flash-again={flashAgain}
     {...{ [valueAttr]: id, 'data-type': valueType(val) }}
     ><ValueView
       value={val}
@@ -99,7 +106,19 @@
   .rs-flash {
     animation: rs-flash 0.7s ease-out;
   }
+  .rs-flash-again {
+    animation-name: rs-flash-again;
+  }
   @keyframes rs-flash {
+    from {
+      background: var(--rs-accent);
+      color: var(--rs-on-accent);
+    }
+    to {
+      background: transparent;
+    }
+  }
+  @keyframes rs-flash-again {
     from {
       background: var(--rs-accent);
       color: var(--rs-on-accent);
