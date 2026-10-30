@@ -104,6 +104,7 @@
               {sym}
               {val}
               flashing={flasher.isFlashing(node.id, sym)}
+              flashAgain={flasher.flashAgain(node.id, sym)}
               defaultExpanded={expandValues}
               {onEdit}
               {onInspect}
