@@ -481,10 +481,46 @@
   .act:hover {
     color: var(--rs-fg);
   }
+  /* A flat row clips what is outside it, so the frame is drawn inside the name, and the negative
+     margin keeps the text where it was. The pulse has its own layer: .rs-flash animates the name. */
+  .node.rs-selected > .name,
+  .name.rs-flash {
+    margin: 0 calc(-1 * var(--rs-mark-pad));
+    padding: 0 var(--rs-mark-pad);
+    border-radius: var(--rs-mark-radius);
+  }
+  .node:not(.rs-row).rs-selected > .name,
+  .node:not(.rs-row) > .name.rs-flash {
+    padding-block: var(--rs-mark-pad-block);
+  }
   .node.rs-selected > .name {
-    background: color-mix(in srgb, var(--rs-accent) 30%, transparent);
-    outline: 1px solid var(--rs-accent);
-    border-radius: 2px;
+    position: relative;
+    background: color-mix(in srgb, var(--rs-accent) 22%, transparent);
+  }
+  .node.rs-selected > .name::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--rs-accent);
+    pointer-events: none;
+    animation: rs-selected-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes rs-selected-pulse {
+    0%,
+    100% {
+      background: transparent;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rs-accent) 30%, transparent);
+    }
+    50% {
+      background: color-mix(in srgb, var(--rs-accent) 12%, transparent);
+      box-shadow: inset 0 0 0 1px var(--rs-accent);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .node.rs-selected > .name::after {
+      animation: none;
+    }
   }
   .rs-flash {
     animation: rs-flash 0.7s ease-out;
