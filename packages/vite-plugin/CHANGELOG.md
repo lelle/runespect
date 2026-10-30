@@ -1,5 +1,16 @@
 # @runespect/vite-plugin
 
+## 0.1.2
+
+### Patch Changes
+
+- [#11](https://github.com/lelle/runespect/pull/11) [`704310e`](https://github.com/lelle/runespect/commit/704310ec1c1824b014072df5f72538fbeedd7e60) Thanks [@lelle](https://github.com/lelle)! - The page loads one agent, the plugin's, also when the app's `@runespect/ui` is another version and
+  the package manager installed a second agent next to it. Vite's own resolver used to hand that
+  second agent to the overlay, which then showed an empty tree; now the overlay gets the plugin's
+  agent, and shows its version notice when the two do not match.
+- Updated dependencies []:
+  - @runespect/agent@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes
