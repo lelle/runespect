@@ -38,6 +38,7 @@ that hurts someone goes out at once, smaller things are gathered. There is no fi
 3. Merging it starts the publish job, which waits for approval in the `Release` environment and
    then publishes to npm with provenance through trusted publishing (OIDC). Approve or cancel it
    right away: a waiting publish holds every later release run.
-4. When the release tags a new `@runespect/extension@x.y.z`, build the extension
+4. A release of only the extension goes through the same job: it publishes nothing to npm and tags
+   `@runespect/extension@x.y.z`. On a new tag, build the extension
    (`pnpm --filter @runespect/extension build`), zip `packages/extension/dist` and upload it in the
    Chrome Web Store dashboard.
