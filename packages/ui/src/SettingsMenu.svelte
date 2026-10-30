@@ -84,7 +84,7 @@
   }
   .rs-settings {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
   }
   .gear {
     background: transparent;
