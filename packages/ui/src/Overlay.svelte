@@ -9,6 +9,7 @@
   import { Search } from './search.svelte';
   import { Preferences } from './preferences.svelte';
   import SettingsMenu from './SettingsMenu.svelte';
+  import StateFilterChip from './StateFilterChip.svelte';
   import { EMPTY, hold, shown, type Held } from './held';
   import type { SerializedNode } from '@runespect/agent/protocol/internal';
 
@@ -155,14 +156,6 @@
           aria-pressed={picking}
           onclick={() => (picking ? stopPicking() : (picking = true))}>⌖ pick</button
         >
-        <button
-          class="pick"
-          class:active={prefs.onlyStateful}
-          data-testid="runespect-only-stateful"
-          aria-pressed={prefs.onlyStateful}
-          title="Show only components with reactive values"
-          onclick={() => (prefs.onlyStateful = !prefs.onlyStateful)}>state</button
-        >
         <SettingsMenu
           items={[
             { label: 'Flash on update', checked: prefs.flash, onChange: (v) => (prefs.flash = v) },
@@ -170,6 +163,11 @@
               label: 'Expand values',
               checked: prefs.expandValues,
               onChange: (v) => (prefs.expandValues = v),
+            },
+            {
+              label: 'Only components with state',
+              checked: prefs.onlyStateful,
+              onChange: (v) => (prefs.onlyStateful = v),
             },
             {
               kind: 'select',
@@ -203,6 +201,9 @@
         <span class="search-count" data-testid="runespect-search-count">{search.status}</span>
       {/if}
     </div>
+    {#if prefs.onlyStateful}
+      <StateFilterChip onClear={() => (prefs.onlyStateful = false)} />
+    {/if}
     <Tree
       {sent}
       {nodes}

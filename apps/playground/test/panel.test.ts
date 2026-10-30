@@ -156,7 +156,7 @@ test('an empty tree broadcast does not blank a tree already shown (e.g. leftover
   expect(target.querySelector('[data-component="Counter"]')).toBeTruthy();
 });
 
-test('the "state" filter toggle hides components without reactive values', () => {
+test('the state filter in the settings menu hides components without reactive values, and says so', () => {
   let listener: ((m: any) => void) | undefined;
   const transport = { send: () => {}, onMessage: (cb: any) => ((listener = cb), () => {}) };
   const target = document.createElement('div');
@@ -192,10 +192,28 @@ test('the "state" filter toggle hides components without reactive values', () =>
   flushSync();
   expect(target.querySelector('[data-component="Static"]')).toBeTruthy();
 
-  (target.querySelector('[data-testid="runespect-only-stateful"]') as HTMLButtonElement).click();
+  const chip = () => target.querySelector('[data-testid="runespect-state-filter"]');
+  expect(chip()).toBeNull();
+
+  (target.querySelector('[data-testid="runespect-settings"]') as HTMLButtonElement).click();
+  flushSync();
+  const setting = () =>
+    target.querySelector('[data-setting="Only components with state"]') as HTMLInputElement;
+  setting().click();
   flushSync();
   expect(target.querySelector('[data-component="Counter"]')).toBeTruthy(); // stateful kept
   expect(target.querySelector('[data-component="Static"]')).toBeNull(); // stateless hidden
+  expect(chip()).toBeTruthy();
+
+  (chip()!.querySelector('button') as HTMLButtonElement).click();
+  flushSync();
+  expect(target.querySelector('[data-component="Static"]')).toBeTruthy();
+  expect(chip()).toBeNull();
+
+  // A click on the × is outside the menu, so the menu closed; it opens with the box unticked.
+  (target.querySelector('[data-testid="runespect-settings"]') as HTMLButtonElement).click();
+  flushSync();
+  expect(setting().checked).toBe(false);
 });
 
 test('the "Hide" input excludes matching components but keeps their children', () => {
