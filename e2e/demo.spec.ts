@@ -77,7 +77,8 @@ test('the frame of a selected name fits inside its row, and the name stays where
   expect(frame!.y).toBeGreaterThanOrEqual(row!.y);
   expect(frame!.y + frame!.height).toBeLessThanOrEqual(row!.y + row!.height);
   expect(await selected.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none');
-  expect(frame!.x + 5).toBeCloseTo(before!.x, 0);
+  const pad = await selected.evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft));
+  expect(frame!.x + pad).toBeCloseTo(before!.x, 0);
 });
 
 test('a $bindable prop edited in the panel changes its parent', async ({ page }) => {
