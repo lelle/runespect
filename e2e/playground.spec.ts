@@ -101,14 +101,18 @@ test('hovering different instances of the same component highlights different el
   expect(box0!.x !== box1!.x || box0!.y !== box1!.y).toBe(true);
 });
 
-test('overlay: the "state" filter toggle hides components without reactive values', async ({
+test('overlay: the state filter in the settings menu hides components without reactive values', async ({
   page,
 }) => {
   await page.goto('/');
   await expect(page.locator('[data-component="Static"]').first()).toBeVisible(); // stateless
-  await page.getByTestId('runespect-only-stateful').click();
+  await page.getByTestId('runespect-settings').click();
+  await page.locator('[data-setting="Only components with state"]').check();
   await expect(page.locator('[data-component="Static"]')).toHaveCount(0); // hidden
   await expect(page.locator('[data-component="Counter"]').first()).toBeVisible(); // stateful kept
+  await page.keyboard.press('Escape'); // the open menu lies over the filter's line
+  await page.getByTestId('runespect-state-filter').getByRole('button').click();
+  await expect(page.locator('[data-component="Static"]').first()).toBeVisible();
 });
 
 test('search filters the tree by component name', async ({ page }) => {

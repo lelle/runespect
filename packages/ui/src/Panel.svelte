@@ -40,6 +40,7 @@
   import Tree from './Tree.svelte';
   import Detail from './Detail.svelte';
   import SettingsMenu from './SettingsMenu.svelte';
+  import StateFilterChip from './StateFilterChip.svelte';
   import Split from './Split.svelte';
   import PaneBoundary from './PaneBoundary.svelte';
 
@@ -336,14 +337,6 @@
     {#if search.status}
       <span class="search-count" data-testid="runespect-search-count">{search.status}</span>
     {/if}
-    <button
-      class="filter"
-      class:active={prefs.onlyStateful}
-      data-testid="runespect-only-stateful"
-      aria-pressed={prefs.onlyStateful}
-      title="Show only components with reactive values"
-      onclick={() => (prefs.onlyStateful = !prefs.onlyStateful)}>state</button
-    >
     <input
       class="search exclude"
       type="search"
@@ -411,6 +404,11 @@
           onChange: (v) => (prefs.expandValues = v),
         },
         {
+          label: 'Only components with state',
+          checked: prefs.onlyStateful,
+          onChange: (v) => (prefs.onlyStateful = v),
+        },
+        {
           kind: 'select',
           label: 'Theme',
           value: theme.setting,
@@ -448,6 +446,9 @@
     id="runespect-tabpanel"
     aria-labelledby="runespect-tab-{tab}"
   >
+    {#if tab === 'tree' && prefs.onlyStateful}
+      <StateFilterChip onClear={() => (prefs.onlyStateful = false)} />
+    {/if}
     {#if tab === 'history'}
       <Split bind:pct={historySplit} label="Resize the commit list and its detail">
         {#snippet left()}
@@ -648,8 +649,7 @@
     border: 1px solid var(--rs-border);
     font: inherit;
   }
-  .pick,
-  .filter {
+  .pick {
     background: transparent;
     color: inherit;
     border: 1px solid var(--rs-border);
@@ -662,8 +662,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .pick.active,
-  .filter.active {
+  .pick.active {
     background: var(--rs-accent);
     color: var(--rs-on-accent);
     border-color: var(--rs-accent);

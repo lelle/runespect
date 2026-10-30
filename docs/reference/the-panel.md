@@ -20,7 +20,8 @@ What each part of the runespect panel does. The panel is the same in the window 
 ## Search and filters
 
 - **Filter** matches component names, as text or as a `/regex/`. `/` focuses it, Esc clears it.
-- **state** shows only components with reactive values. A prop counts as a value.
+- **Only components with state**, in the settings menu, shows only components with reactive values.
+  A prop counts as a value. While it is on, a line above the tree says so, and its × turns it off.
 - **Hide** takes comma-separated fragments of names or files. A hidden component's children stay,
   one level up.
 

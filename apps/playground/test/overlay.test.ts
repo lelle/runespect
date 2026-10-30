@@ -68,14 +68,12 @@ test('the overlay lives in a shadow root of its own, with its styles inside it',
 test("while picking, the overlay's own buttons still work and nothing is picked", () => {
   const { overlay } = setup();
   const pick = overlay.querySelector('[data-testid="runespect-pick"]') as HTMLButtonElement;
-  const stateful = overlay.querySelector(
-    '[data-testid="runespect-only-stateful"]',
-  ) as HTMLButtonElement;
+  const settings = overlay.querySelector('[data-testid="runespect-settings"]') as HTMLButtonElement;
   pick.click();
   flushSync();
-  stateful.click();
+  settings.click();
   flushSync();
-  expect(stateful.getAttribute('aria-pressed')).toBe('true');
+  expect(settings.getAttribute('aria-expanded')).toBe('true');
   expect(pick.getAttribute('aria-pressed')).toBe('true');
   pick.click(); // the picker listens on the whole document; leave it off for the next test
   flushSync();
@@ -122,12 +120,14 @@ test('overlay drops the editor links when Open in editor is off', () => {
 test('the overlay remembers "only stateful", under the key the panel uses', () => {
   localStorage.clear();
   const first = setup();
-  const button = (o: ShadowRoot) =>
-    o.querySelector('[data-testid="runespect-only-stateful"]') as HTMLButtonElement;
-  button(first.overlay).click();
+  (first.overlay.querySelector('[data-testid="runespect-settings"]') as HTMLButtonElement).click();
+  flushSync();
+  (
+    first.overlay.querySelector('[data-setting="Only components with state"]') as HTMLInputElement
+  ).click();
   flushSync();
 
-  expect(button(setup().overlay).getAttribute('aria-pressed')).toBe('true');
+  expect(setup().overlay.querySelector('[data-testid="runespect-state-filter"]')).toBeTruthy();
   expect(localStorage.getItem('runespect:onlyStateful')).toBe('true');
 });
 

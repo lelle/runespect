@@ -52,9 +52,13 @@ test('the state filter hides the components that have no values', async ({ page 
   await page.goto(DEMO);
   const footer = page.locator('#panel [data-select="Footer"]');
   await expect(footer).toHaveCount(1);
-  await page.getByTestId('runespect-only-stateful').click();
+  await page.locator('#panel').getByTestId('runespect-settings').click();
+  await page.locator('#panel [data-setting="Only components with state"]').check();
   await expect(footer).toHaveCount(0);
   await expect(page.locator('#panel [data-select="Shop"]').first()).toBeVisible();
+  await page.keyboard.press('Escape'); // the open menu lies over the filter's line
+  await page.locator('#panel').getByTestId('runespect-state-filter').getByRole('button').click();
+  await expect(footer).toHaveCount(1);
 });
 
 test('a $bindable prop edited in the panel changes its parent', async ({ page }) => {
