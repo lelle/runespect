@@ -51,7 +51,8 @@ test('broadcast() is a no-op on the server (no window)', () => {
 test('runespect() vite plugin serves a dev-only broadcast virtual module', async () => {
   const plugin: any = runespect(); // hooks are ObjectHook unions; call them directly in the test
   expect(plugin.name).toBe('runespect');
-  expect(plugin.apply).toBe('serve'); // dev only
+  expect(plugin.apply({}, { command: 'serve' })).toBe(true);
+  expect(plugin.apply({}, { command: 'build' })).toBe(false); // dev only
 
   // injects a <script src> pointing at the virtual module (not an inline import,
   // which Vite would not rewrite)

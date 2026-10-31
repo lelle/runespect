@@ -25,6 +25,7 @@ kinds, so it is clear whether you are learning, doing, or looking something up.
 ### How-to guides — task-focused
 
 - [Use with SvelteKit](how-to/use-with-sveltekit.md)
+- [Choose where to run it](how-to/choose-where-to-run-it.md)
 - [Open the panel window](how-to/open-the-panel-window.md)
 - [Add the in-page overlay](how-to/add-the-overlay.md)
 - [Use the browser extension](how-to/use-the-extension.md)

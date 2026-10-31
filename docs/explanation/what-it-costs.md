@@ -5,7 +5,7 @@ each component hands the agent a function per value, and nothing calls it. Once 
 panel window, the extension, the overlay or `window.__runespect`), the agent reads every value in an
 `$effect` of its own, and one effect root turns each flush into a list of changes and a commit in the
 history. That is the whole cost, and it is paid in development only: a production build carries none
-of it.
+of it, unless you turn on [`includeInRelease`](../reference/options.md#includeinrelease).
 
 Measured in headless Chromium (one page of components that each hold a
 `$state` and a `$derived`, median per flush where every component changes):

@@ -2,14 +2,14 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Plugin, ViteDevServer } from 'vite';
+import type { Logger, Plugin, ViteDevServer } from 'vite';
 import {
   TO_PAGE_KINDS,
   TO_PANEL_KINDS,
   isRunespectMessage,
 } from '@runespect/agent/protocol/internal';
 import { panelAssetPath, panelContentType, panelRedirect } from './panel-route.ts';
-import { AGENT_RUNTIME, DEV_SERVER_FLAG, agentCall } from './instrument.ts';
+import { AGENT_RUNTIME, DEV_SERVER_FLAG, RELEASE_ROOT_FLAG, agentCall } from './instrument.ts';
 import { uiVersionProblem } from './ui-version.ts';
 import { instrumentModule } from './module-state.ts';
 
@@ -25,6 +25,12 @@ export interface RunespectOptions {
    * your editor does not open `vscode://` links or the dev server runs on another machine.
    */
   openInEditor?: boolean;
+  /**
+   * Also build runespect into the code `vite build` produces, for a dev or test environment without
+   * a dev server. Default `false`. Anyone who can open that build can read and edit its component
+   * state, so never let it reach production.
+   */
+  includeInRelease?: boolean;
 }
 
 // The dev servers in this process that runespect() serves. The flag runespectPreprocess() reads is
@@ -34,8 +40,9 @@ const AGENT_ENTRIES = new Set([AGENT_RUNTIME, '@runespect/agent/internal', '@run
 
 /**
  * The dev-server half of runespect: broadcasts the instrumented tree to the browser extension and
- * serves the standalone panel window at `/__runespect/`. Applies to `vite dev` only. Pair it with
- * {@link runespectPreprocess}, which does the instrumentation.
+ * serves the standalone panel window at `/__runespect/`. Applies to `vite dev` only, unless
+ * `includeInRelease` says otherwise. Pair it with {@link runespectPreprocess}, which does the
+ * instrumentation.
  */
 export function runespect(options: RunespectOptions = {}): Plugin {
   const VIRTUAL = 'virtual:runespect-broadcast';
@@ -48,16 +55,29 @@ export function runespect(options: RunespectOptions = {}): Plugin {
     '.svelte-kit/generated/client/app.js',
     '.svelte-kit/generated/dev/client/app.js',
   ];
+  // And its build entry to generated/client-optimized/, and generated/build/client-optimized/.
+  const SVELTEKIT_BUILD_ENTRIES = [
+    '.svelte-kit/generated/client-optimized/app.js',
+    '.svelte-kit/generated/build/client-optimized/app.js',
+  ];
   const RESOLVED = '\0' + VIRTUAL;
+  let releaseRoot: string | undefined;
+  let logger: Logger | undefined;
+  // SvelteKit builds several environments in turn, each between a buildStart and a closeBundle.
+  let building = 0;
   const plugin: Plugin = {
     name: 'runespect',
-    apply: 'serve',
+    apply: (_, { command }) => command === 'serve' || options.includeInRelease === true,
     configResolved: {
       // Before SvelteKit's own configResolved, which warns about any plugin that has the hook.
       order: 'pre',
       handler(config) {
+        if (config.command === 'build') {
+          releaseRoot = config.root;
+          logger = config.logger;
+        }
         // A test runner also starts Vite in serve mode; tests opt in with runespectPreprocess({ enabled }).
-        if (!process.env.VITEST) {
+        else if (!process.env.VITEST) {
           servers.add(plugin);
           process.env[DEV_SERVER_FLAG] = '1';
         }
@@ -69,7 +89,20 @@ export function runespect(options: RunespectOptions = {}): Plugin {
         if (problem) config.logger.warn(problem);
       },
     },
+    buildStart() {
+      if (!releaseRoot) return;
+      building++;
+      process.env[RELEASE_ROOT_FLAG] = releaseRoot;
+      // Once: SvelteKit also builds a server environment, and resolves the config for each.
+      if (this.environment.name === 'client') {
+        logger?.warn(
+          '[runespect] includeInRelease is on. This build exposes component state and lets ' +
+            'anyone edit it. Do not deploy it to production.',
+        );
+      }
+    },
     closeBundle() {
+      if (releaseRoot && --building === 0) delete process.env[RELEASE_ROOT_FLAG];
       if (!servers.delete(plugin) || servers.size) return;
       delete process.env[DEV_SERVER_FLAG];
     },
@@ -99,7 +132,7 @@ export function runespect(options: RunespectOptions = {}): Plugin {
       if (id !== RESOLVED) return;
       // Two consumers, one agent: window.postMessage feeds the browser extension, and Vite's HMR
       // channel feeds the standalone panel window at /__runespect/; start() attaches both.
-      const off = options.openInEditor === false;
+      const off = options.openInEditor === false || !!releaseRoot;
       return [
         `import * as __runespect from ${JSON.stringify(AGENT_RUNTIME)};`,
         `${agentCall('start', `{ hot: import.meta.hot${off ? ', openInEditor: false' : ''} }`)};`,
@@ -108,12 +141,12 @@ export function runespect(options: RunespectOptions = {}): Plugin {
     },
     transform(code: string, id: string) {
       // SvelteKit's generated entry — the app's own module graph, so no HTML hook is involved.
-      if (SVELTEKIT_ENTRIES.some((entry) => id.includes(entry))) {
+      if ((releaseRoot ? SVELTEKIT_BUILD_ENTRIES : SVELTEKIT_ENTRIES).some((e) => id.includes(e))) {
         return { code: `${code}\nimport ${JSON.stringify(VIRTUAL)};\n`, map: null };
       }
       // State in .svelte.ts modules. A normal plugin runs after Vite has stripped the types and
       // before vite-plugin-svelte compiles the module (it is `enforce: 'post'`).
-      if (process.env[DEV_SERVER_FLAG] !== '1') return;
+      if (process.env[DEV_SERVER_FLAG] !== '1' && !releaseRoot) return;
       return instrumentModule(code, id, (source) => this.parse(source));
     },
     // Broker between the app page and the standalone panel window: neither can reach the other, but
@@ -159,10 +192,15 @@ export function runespect(options: RunespectOptions = {}): Plugin {
     // Before Vite's own HTML transform, which then puts the app's `base` in front of the src.
     transformIndexHtml: {
       order: 'pre',
+      // A build has no /@id/ URL, and bundles what an inline module imports.
       handler: () => [
         {
           tag: 'script',
-          attrs: { type: 'module', src: `/@id/${RESOLVED.replace('\0', '__x00__')}` },
+          attrs: {
+            type: 'module',
+            ...(!releaseRoot && { src: `/@id/${RESOLVED.replace('\0', '__x00__')}` }),
+          },
+          ...(releaseRoot && { children: `import ${JSON.stringify(VIRTUAL)};` }),
           injectTo: 'body' as const,
         },
       ],

@@ -5,6 +5,8 @@ import type { PreprocessorGroup, Processed } from 'svelte/compiler';
 import {
   AGENT_RUNTIME,
   DEV_SERVER_FLAG,
+  RELEASE_ROOT_FLAG,
+  reportedPath,
   agentCall,
   isNeverInstrumented,
   skipUnreadable,
@@ -47,15 +49,18 @@ export function runespectPreprocess(
   return {
     name: 'runespect-instrument',
     markup({ content, filename }) {
+      const release = !!process.env[RELEASE_ROOT_FLAG];
       // Same production test as vitePreprocess: `vite build` sets NODE_ENV before preprocessing.
-      if (process.env.NODE_ENV === 'production') return;
-      if (!(options.enabled ?? process.env[DEV_SERVER_FLAG] === '1')) return;
+      if (process.env.NODE_ENV === 'production' && !release) return;
+      if (!(options.enabled ?? (release || process.env[DEV_SERVER_FLAG] === '1'))) return;
       // Never instrument library components or SvelteKit's generated root; otherwise respect the
       // include filter.
       if (filename && (isNeverInstrumented(filename) || !matches(include, filename))) return;
 
       try {
-        return instrumentComponent(content, filename);
+        return instrumentComponent(content, filename, {
+          loc: filename && reportedPath(filename),
+        });
       } catch {
         skipUnreadable(
           filename ?? 'a component',

@@ -15,6 +15,15 @@ export const AGENT_RUNTIME = '@runespect/agent/runtime';
 // as a separate instance.
 export const DEV_SERVER_FLAG = 'RUNESPECT_DEV_SERVER';
 
+// Set by runespect({ includeInRelease: true }) while it builds an app, to the project root.
+export const RELEASE_ROOT_FLAG = 'RUNESPECT_RELEASE_ROOT';
+
+/** The path to report for a file: from the project root in a build, so the machine that built it stays out of it. */
+export function reportedPath(filename: string): string {
+  const root = process.env[RELEASE_ROOT_FLAG];
+  return root ? path.relative(root, filename).replaceAll(path.sep, '/') : filename;
+}
+
 // A file runespect cannot read is left as it is: runespect adds to an app and never breaks it. Told
 // once per file, since the dev server compiles it again on every change.
 const warned = new Set<string>();
