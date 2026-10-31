@@ -23,6 +23,7 @@ const metaLine = (el: Element): number | undefined =>
 export function componentsFromSvelteMeta(root: Element): SerializedNode[] {
   // file -> { line, children: set of component files contained directly within it }
   const info = new Map<string, { line: number; children: Set<string> }>();
+  const topLevel = new Set<string>();
   const rec = (f: string) => {
     let i = info.get(f);
     if (!i) info.set(f, (i = { line: 0, children: new Set() }));
@@ -45,11 +46,13 @@ export function componentsFromSvelteMeta(root: Element): SerializedNode[] {
     const r = rec(f);
     if (!r.line) r.line = metaLine(el) ?? 0;
     const parentFile = nearestAncestorFile(el);
-    if (parentFile && parentFile !== f) rec(parentFile).children.add(f);
+    if (!parentFile) topLevel.add(f);
+    else if (parentFile !== f) rec(parentFile).children.add(f);
   }
 
-  const childFiles = new Set([...info.values()].flatMap((i) => [...i.children]));
-  const roots = [...info.keys()].filter((f) => !childFiles.has(f));
+  // Not "the files that are nobody's child": markup passed as a snippet puts a parent's file inside
+  // its child's, so with snippets every file can be someone's child.
+  const roots = [...info.keys()].filter((f) => topLevel.has(f));
 
   const nodes: SerializedNode[] = [];
   let seq = 0;
@@ -67,9 +70,9 @@ export function componentsFromSvelteMeta(root: Element): SerializedNode[] {
       loc: `${file}:${r.line}`,
     };
     nodes.push(node);
-    if (!path.has(file)) {
-      const next = new Set(path).add(file);
-      for (const childFile of r.children) node.children.push(visit(childFile, id, next));
+    const next = new Set(path).add(file);
+    for (const childFile of r.children) {
+      if (!next.has(childFile)) node.children.push(visit(childFile, id, next));
     }
     return id;
   };
