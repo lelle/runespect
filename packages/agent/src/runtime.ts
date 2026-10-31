@@ -10,6 +10,7 @@ import {
   broadcast,
   connect,
   createHotTransport,
+  pageChannel,
   enter,
   enterModule,
   leave,
@@ -119,16 +120,19 @@ export function module(
 }
 
 /**
- * Called once per page: report to the browser extension, and over the dev server to the panel
- * window. Returns what stops both, for a test.
+ * Called once per page: report to the browser extension, and to the panel window, over the dev
+ * server or in a build directly. Returns what stops both, for a test.
  */
-export function start(options: { hot?: HotChannel; openInEditor?: boolean } = {}): () => void {
+export function start(
+  options: { hot?: HotChannel; inBuild?: boolean; openInEditor?: boolean } = {},
+): () => void {
   const stops: (() => void)[] = [];
   failOpen('the page', () => {
     // Before anything connects: the first hello already says so.
     if (options.openInEditor === false) setOpenInEditor(false);
     stops.push(broadcast());
-    if (options.hot) stops.push(connect(createHotTransport(options.hot)));
+    const channel = options.inBuild ? pageChannel() : options.hot;
+    if (channel) stops.push(connect(createHotTransport(channel)));
   });
   return () => stops.forEach((stop) => stop());
 }

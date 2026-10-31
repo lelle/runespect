@@ -1,6 +1,14 @@
 /** Where the standalone panel window is served from, on the app's own dev server, below its `base`. */
 export const PANEL_ROUTE = '/__runespect';
 
+// How a panel window in a build knows there is no dev server to ask for its channel.
+export const IN_BUILD_META = 'runespect-transport';
+
+/** The panel window's page as a build carries it. */
+export function releasePanelHtml(html: string): string {
+  return html.replace('<head>', `<head><meta name="${IN_BUILD_META}" content="page">`);
+}
+
 const routeUnder = (base: string): string => base.replace(/\/$/, '') + PANEL_ROUTE;
 
 // Which file inside panel-dist a request maps to, or null when the request is not ours. The panel

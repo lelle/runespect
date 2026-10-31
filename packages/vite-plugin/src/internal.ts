@@ -4,6 +4,7 @@ export {
   panelAssetPath,
   panelContentType,
   panelRedirect,
+  releasePanelHtml,
   viteClientUrl,
 } from './panel-route.ts';
 export { instrumentModule } from './module-state.ts';

@@ -11,11 +11,11 @@ Object.groupBy(window.__runespect.events, (e) => e.hop);
 
 Which hops you should see depends on where you look at the state:
 
-| Where                          | Hops                                       | How the panel gets the data                  |
-| ------------------------------ | ------------------------------------------ | -------------------------------------------- |
-| Panel window (`/__runespect/`) | `agent`                                    | over the dev server's HMR channel            |
-| In-page overlay (`<Inspect>`)  | `agent`                                    | reads the agent in the same page             |
-| Browser extension              | `agent` → `relay` → `panel-port` → `panel` | content script, service worker, DevTools tab |
+| Where                          | Hops                                       | How the panel gets the data                                           |
+| ------------------------------ | ------------------------------------------ | --------------------------------------------------------------------- |
+| Panel window (`/__runespect/`) | `agent`                                    | over the dev server's HMR channel, or in a build a `BroadcastChannel` |
+| In-page overlay (`<Inspect>`)  | `agent`                                    | reads the agent in the same page                                      |
+| Browser extension              | `agent` → `relay` → `panel-port` → `panel` | content script, service worker, DevTools tab                          |
 
 Only the extension's hops are mirrored into the page, so with the panel window or the overlay an
 `agent` hop alone is the whole chain. With the extension, a missing hop is the answer. See
@@ -30,6 +30,10 @@ a broken package; report it. From a clone of this repository, build it first:
 
 Under a Vite `base`, the panel moves with the app: with `base: '/app/'` it is at
 `/app/__runespect/`.
+
+In a build with `includeInRelease`, the panel is files in the build's `__runespect/` folder. Check that
+your host serves that folder, and keep the slash at the end of the address: without it, the panel
+looks for its files in the wrong place. Some hosts treat a folder that starts with `_` specially.
 
 ## The panel says "Tier 1 — component names only"
 
@@ -93,6 +97,9 @@ window.__runespect; // undefined → the agent never connected in this page
 before the agent ran. Check the app's own console for errors first: runespect loads with the app.
 In a SvelteKit app the plugin loads the agent through Kit's generated client entry; a Kit version
 that moved it would leave the agent out, and `pnpm test:pack` checks that against Kit 2 and 3.
+
+In a build with `includeInRelease`, the app and the panel window have to be open in the same browser,
+on the same origin. Another browser, or a private window next to a normal one, hears nothing.
 
 ## The dev server warns `[runespect] could not read …`
 

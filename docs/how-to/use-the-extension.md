@@ -53,4 +53,5 @@ On a page without a Svelte development build they find nothing and post nothing.
 
 - Chrome and Chromium-based browsers only (Manifest V3).
 - Without the plugin it shows no values. On a production build it shows nothing at all, because the bundle
-  carries no component information.
+  carries no component information, unless it was built with
+  [`includeInRelease`](../reference/options.md#includeinrelease).

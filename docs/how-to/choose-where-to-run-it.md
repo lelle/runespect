@@ -8,7 +8,7 @@ and everything works there. Elsewhere, this is what you get:
 | `vite dev`, local or on a shared server                    | Tier 0       | Tier 0  | Tier 0    |
 | `vite dev` with `server.hmr: false`                        | Tier 0       | Tier 0  | Tier 0    |
 | `vite dev` with no WebSocket (`server.ws: false`, a proxy) | no           | Tier 0  | Tier 0    |
-| `vite build` with `includeInRelease`, deployed             | no           | no      | Tier 0    |
+| `vite build` with `includeInRelease`, deployed             | Tier 0       | no      | Tier 0    |
 | `NODE_ENV=development vite build`, deployed                | no           | no      | Tier 1    |
 | `vite build`, deployed                                     | no           | no      | nothing   |
 
@@ -31,8 +31,12 @@ runespect({ includeInRelease: process.env.DEPLOY_ENV === 'test' });
 DEPLOY_ENV=test vite build
 ```
 
-Everyone who looks at the state then needs the extension. Anyone who can open the build can read and
-edit its state, so give each environment its own build, and never promote this one to production.
+Open the app, then `/__runespect/` in another tab of the same browser, or use the extension. Keep the
+slash at the end: not every host adds it. Some hosts treat a folder that starts with `_` specially;
+GitHub Pages needs a `.nojekyll` file to serve it.
+
+Anyone who can open the build can read and edit its state, so give each environment its own build,
+and never promote this one to production.
 
 ### Run the dev server there
 
@@ -40,7 +44,7 @@ edit its state, so give each environment its own build, and never promote this o
 vite dev --host
 ```
 
-This also gives the panel window. Vite refuses host names it does not know, so add the environment's
+Vite refuses host names it does not know, so add the environment's
 name to [`server.allowedHosts`](https://vite.dev/config/server-options#server-allowedhosts). Behind a
 reverse proxy, the proxy has to forward WebSockets for the panel window to work. If it does not, use
 the extension.

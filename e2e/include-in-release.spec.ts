@@ -117,3 +117,27 @@ test('highlight and the picker find the elements of a minified build', async ({ 
   await button.click();
   expect(await picked).toEqual(expect.any(Number));
 });
+
+for (const [name, origin, path] of [
+  ['a plain Vite build', PLAYGROUND, ''],
+  ['a SvelteKit build', SVELTEKIT.replace('/prerendered', '/'), 'prerendered'],
+]) {
+  test(`the panel window of ${name} shows and edits the app, with no dev server`, async ({
+    context,
+  }) => {
+    const app = await context.newPage();
+    await app.goto(origin + path);
+    const panel = await context.newPage();
+    const errors = errorsOn(panel);
+    await panel.goto(`${origin}__runespect/?source=/${path}`);
+
+    await expect(panel.locator('[data-select="Counter"]').first()).toBeVisible();
+    await panel.locator('[data-select="Counter"]').first().click();
+    const edit = panel.locator('[data-detail-edit="Counter.count"]').first();
+    await edit.fill('4242');
+    await edit.dispatchEvent('input');
+
+    await expect(app.locator('button', { hasText: '4242' }).first()).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+}
