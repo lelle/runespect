@@ -13,6 +13,7 @@ const appDir = path.resolve(import.meta.dirname, 'fixtures/release-app');
 
 async function buildApp(
   includeInRelease?: boolean,
+  panelInRelease?: boolean,
 ): Promise<{ bundle: string; warnings: string[]; panel: Record<string, string> }> {
   const warnings: string[] = [];
   const customLogger = createLogger('silent');
@@ -21,7 +22,10 @@ async function buildApp(
     configFile: false,
     root: appDir,
     customLogger,
-    plugins: [svelte({ preprocess: [runespectPreprocess()] }), runespect({ includeInRelease })],
+    plugins: [
+      svelte({ preprocess: [runespectPreprocess()] }),
+      runespect({ includeInRelease, panelInRelease }),
+    ],
     build: { write: false },
   })) as Rollup.RollupOutput;
   const bundle = output.output
@@ -97,3 +101,19 @@ test('the panel window in a build is told to reach the page without a dev server
     '<html><head><meta name="runespect-transport" content="page"><title>runespect</title></head></html>',
   );
 });
+
+test('panelInRelease: true is the default: the page opens the channel to the panel window', async () => {
+  const { bundle } = await buildApp(true);
+
+  expect(bundle).toContain('BroadcastChannel');
+}, 60_000);
+
+test('panelInRelease: false leaves out the panel window and the channel to it', async () => {
+  const { bundle, panel, warnings } = await buildApp(true, false);
+
+  expect(bundle).toContain('__runespect');
+  expect(panel).toEqual({});
+  expect(bundle).not.toContain('BroadcastChannel');
+  expect(warnings.join()).toContain('includeInRelease');
+  expect(warnings.join()).not.toContain('/__runespect/');
+}, 60_000);

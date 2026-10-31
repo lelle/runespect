@@ -31,7 +31,8 @@ runespect({ includeInRelease: process.env.DEPLOY_ENV === 'test' });
 DEPLOY_ENV=test vite build
 ```
 
-Open the app, then `/__runespect/` in another tab of the same browser, or use the extension. Keep the
+Open the app, then `/__runespect/` in another tab of the same browser, or use the extension. With
+only the extension, `panelInRelease: false` leaves the window out of the build. Keep the
 slash at the end: not every host adds it. Some hosts treat a folder that starts with `_` specially;
 GitHub Pages needs a `.nojekyll` file to serve it.
 

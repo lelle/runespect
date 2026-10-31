@@ -10,7 +10,6 @@ import {
   broadcast,
   connect,
   createHotTransport,
-  pageChannel,
   enter,
   enterModule,
   leave,
@@ -20,6 +19,7 @@ import {
   type HotChannel,
   type Subscribable,
 } from './internal.svelte';
+export { pageChannel } from './internal.svelte';
 import { ownElement } from './dom';
 
 export interface SymbolSpec {
@@ -123,16 +123,13 @@ export function module(
  * Called once per page: report to the browser extension, and to the panel window, over the dev
  * server or in a build directly. Returns what stops both, for a test.
  */
-export function start(
-  options: { hot?: HotChannel; inBuild?: boolean; openInEditor?: boolean } = {},
-): () => void {
+export function start(options: { hot?: HotChannel; openInEditor?: boolean } = {}): () => void {
   const stops: (() => void)[] = [];
   failOpen('the page', () => {
     // Before anything connects: the first hello already says so.
     if (options.openInEditor === false) setOpenInEditor(false);
     stops.push(broadcast());
-    const channel = options.inBuild ? pageChannel() : options.hot;
-    if (channel) stops.push(connect(createHotTransport(channel)));
+    if (options.hot) stops.push(connect(createHotTransport(options.hot)));
   });
   return () => stops.forEach((stop) => stop());
 }
