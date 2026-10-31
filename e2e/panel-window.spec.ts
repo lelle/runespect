@@ -100,6 +100,8 @@ test('clicking a change in history selects that component in the tree', async ({
   await app.goto('/?case=crosslink');
   const panel = await context.newPage();
   await panel.goto('/__runespect/?source=/?case=crosslink');
+  // History starts when a panel asks: a click before that is in no commit.
+  await expect(panel.locator('[data-select="Counter"]').first()).toBeVisible();
   await app.locator('#app button').first().click();
 
   await panel.locator('[data-tab="history"]').click();
