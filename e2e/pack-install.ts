@@ -21,6 +21,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGES = ['agent', 'ui', 'vite-plugin'];
 const PORT = 5189;
 const KIT_PORT = 5190;
+const KIT_RELEASE_PORT = 5197;
 // A space in the path, as under `/Users/John Doe/`: paths derived from URLs must survive it.
 const work = mkdtempSync(join(tmpdir(), 'runespect pack-'));
 const run = (cmd: string, args: string[], cwd: string) =>
@@ -128,7 +129,10 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { runespect, runespectPreprocess } from '@runespect/vite-plugin';
 
 export default defineConfig({
-  plugins: [sveltekit(${kit3 ? `{ ${preprocess} }` : ''}), runespect()],
+  plugins: [
+    sveltekit(${kit3 ? `{ ${preprocess} }` : ''}),
+    runespect({ includeInRelease: process.env.DEPLOY_ENV === 'test' }),
+  ],
 });
 `,
   );
@@ -180,6 +184,51 @@ export default { ${preprocess} };
   const shown = await panelShows(url, '+page (/)');
   check(shown === 'count 1', `Kit ${kit}: the panel window shows the tree with its values`, shown);
   check(errors.length === 0, `Kit ${kit}: the page hydrates without errors`, errors.join(' | '));
+
+  // The same app built with includeInRelease and served by Kit's own server, with no dev server.
+  execFileSync('pnpm', ['exec', 'vite', 'build'], {
+    cwd: app,
+    stdio: 'inherit',
+    env: { ...process.env, DEPLOY_ENV: 'test' },
+  });
+  const release = startServer(
+    ['exec', 'vite', 'preview', '--port', String(KIT_RELEASE_PORT), '--strictPort'],
+    { cwd: app, keepLog: true },
+  );
+  servers.push(release.stop);
+  const releaseUrl = `http://localhost:${KIT_RELEASE_PORT}/`;
+  await waitForUrl(releaseUrl);
+  const tabs = await browser!.newContext();
+  const built = await tabs.newPage();
+  const builtErrors: string[] = [];
+  built.on('pageerror', (e) => builtErrors.push(e.message));
+  await built.goto(releaseUrl);
+  const panelWindow = await tabs.newPage();
+  await panelWindow.goto(`${releaseUrl}__runespect/?source=/`);
+  const node = panelWindow.locator('[data-select="+page (/)"]').first();
+  const found = await node
+    .waitFor({ timeout: 10000 })
+    .then(() => true)
+    .catch(() => false);
+  check(found, `Kit ${kit}: a build with includeInRelease shows its tree in the panel window`);
+  if (found) {
+    await node.click();
+    const edit = panelWindow.locator('[data-detail-edit="+page (/).count"]').first();
+    await edit.fill('42');
+    await edit.dispatchEvent('input');
+  }
+  const edited = await built
+    .locator('button', { hasText: '42 of 3' })
+    .waitFor({ timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  check(edited, `Kit ${kit}: the panel window edits the built app`);
+  check(
+    builtErrors.length === 0,
+    `Kit ${kit}: the built page hydrates without errors`,
+    builtErrors.join(' | '),
+  );
+  await tabs.close();
 }
 
 const servers: (() => Promise<void>)[] = [];
