@@ -6,7 +6,7 @@ the component tree, and they differ in how much they can show.
 | Status                              | How you get it                          | Tree        | Live values | Editing | Source file |
 | ----------------------------------- | --------------------------------------- | ----------- | ----------- | ------- | ----------- |
 | **Live**: the plugin                | `runespectPreprocess()` + `runespect()` | yes         | yes         | yes     | yes         |
-| **Names only**: the extension alone | install the extension, open a dev build | approximate | no          | no      | yes         |
+| **Names only**: the extension alone | install the extension, open a dev build | approximate | no          | no      | no          |
 | **Capture** (experimental)          | not available in a release              | yes         | read-only   | no      | no          |
 
 ## Live: the plugin
@@ -42,6 +42,8 @@ a Svelte dev server. Nothing to change in the app.
 
 - **No values, no editing, no highlight and no picker.** Svelte's state is not reachable from the
   DOM.
+- **No Open in editor.** `__svelte_meta` gives a path relative to the project, and the panel does not
+  know where the project is.
 - **The tree is approximate.** Nesting is taken from the DOM, so a component that renders markup
   passed as a snippet can look like the parent of what passed it. All instances of one component file
   are shown as one node, and a component that renders no elements of its own does not appear.

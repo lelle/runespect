@@ -117,3 +117,19 @@ test('Panel: Open in editor is gone when the page turned it off', () => {
   expect(menu).toContain('Highlight in page');
   expect(sourceLink).toBeNull();
 });
+
+// Names only sends no hello, and __svelte_meta gives a path relative to a project root the panel
+// cannot know, so a link would open nothing.
+test('Panel: Open in editor is gone in Names only', () => {
+  const panel = mountPanel();
+  panel.emit(treeMessage([cart]));
+  panel.click('[data-select="Cart"]');
+  const row = panel.target.querySelector('[data-select="Cart"]') as HTMLElement;
+  row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 5, clientY: 5 }));
+  flushSync();
+  const menu = [...panel.target.querySelectorAll('[role="menuitem"]')].map((el) =>
+    el.textContent?.trim(),
+  );
+  expect(menu).not.toContain('Open in editor');
+  expect(panel.target.querySelector('[data-detail-source]')).toBeNull();
+});
