@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "runespect",
+  "name": "runespect: Svelte 5 DevTools",
   "description": "Svelte 5 devtools: the component tree and live runes state. Full with the runespect Vite plugin, names only without it.",
   "homepage_url": "https://github.com/lelle/runespect",
   "icons": {
