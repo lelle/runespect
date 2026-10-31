@@ -67,6 +67,10 @@ a build is for, so:
 - Write the test so a forgotten variable gives a clean build: `=== 'test'`, not `!== 'production'`.
 - Build separately for each environment. A build promoted from test to production keeps runespect.
 
+The window also works under a Vite `base`. Under a Content Security Policy it needs
+`style-src 'unsafe-inline'`, because the panel adds its styles as inline `<style>` tags. Without that
+it still works, but has no styling.
+
 When the extension is all you use, leave the window out, so there is no folder to remove in CI:
 
 ```ts
