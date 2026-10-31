@@ -10,6 +10,8 @@ export default defineConfig({
         runespectPreprocess({ include: /playground\/src\/.*\.svelte$/ }),
       ],
     }),
-    runespect(), // dev only: the agent, the panel window at /__runespect/, and module state
+    // The agent, the panel window at /__runespect/, and module state. Dev only, except for the
+    // build e2e/include-in-release.spec.ts drives.
+    runespect({ includeInRelease: process.env.DEPLOY_ENV === 'test' }),
   ],
 });

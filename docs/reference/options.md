@@ -27,7 +27,7 @@ preprocessor first, put runespectPreprocess() last in the list.
 
 ## `runespect(options?)`
 
-A Vite plugin that applies only to the dev server (`apply: 'serve'`). It:
+A Vite plugin that applies only to the dev server, unless `includeInRelease` is on. It:
 
 - adds the agent to the page and connects it to the panel window over Vite's HMR channel, and to
   the extension over `window.postMessage`
@@ -36,14 +36,35 @@ A Vite plugin that applies only to the dev server (`apply: 'serve'`). It:
   collections in `.svelte.ts` and `.svelte.js` modules outside `node_modules`, shown under
   **Modules** in the tree
 
-| Option         | Type      | Default | What it does                                                                                                     |
-| -------------- | --------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
-| `openInEditor` | `boolean` | `true`  | `false` removes **Open in editor** from the panel window, the overlay and the extension. Its links open VS Code. |
+| Option             | Type      | Default | What it does                                                                                                     |
+| ------------------ | --------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `openInEditor`     | `boolean` | `true`  | `false` removes **Open in editor** from the panel window, the overlay and the extension. Its links open VS Code. |
+| `includeInRelease` | `boolean` | `false` | `true` builds runespect into the code `vite build` produces. See below.                                          |
 
 Turn `openInEditor` off when your editor does not open `vscode://` links, or when the dev server
 runs on another machine than your editor.
 
-`vite build` never runs it, so a production build carries none of it.
+Unless `includeInRelease` is on, `vite build` does not run it, so a production build carries none of
+it.
+
+### `includeInRelease`
+
+Builds the agent and the instrumentation into the app, for a dev or test environment without a dev
+server. The extension then shows the app as Tier 0. The panel window needs a dev server and is not
+there, and **Open in editor** is off.
+
+```ts
+runespect({ includeInRelease: process.env.DEPLOY_ENV === 'test' });
+```
+
+**Do not let this reach production.** Anyone who can open the build can read and edit its component
+state, and it contains your project-relative source paths. `runespect` cannot tell which environment
+a build is for, so:
+
+- Write the test so a forgotten variable gives a clean build: `=== 'test'`, not `!== 'production'`.
+- Build separately for each environment. A build promoted from test to production keeps runespect.
+
+The build log says when it is on, and the build grows: 25 KB before compression on our playground.
 
 A `.svelte.ts` or `.svelte.js` module it cannot read is served without runespect, with the same
 warning once.

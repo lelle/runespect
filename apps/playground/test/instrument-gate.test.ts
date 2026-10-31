@@ -75,3 +75,8 @@ test('runespect’s own components are never instrumented, wherever they are ins
   expect(markup(own)).toBeUndefined();
   expect(markup(app)).not.toBeUndefined();
 });
+
+test('enabled: true alone does not instrument a production build', () => {
+  vi.stubEnv('NODE_ENV', 'production');
+  expect(instruments({ enabled: true })).toBe(false);
+});

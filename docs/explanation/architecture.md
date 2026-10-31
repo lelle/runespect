@@ -96,7 +96,7 @@ The plugin only describes what the file has; the agent's runtime does the rest (
 
 ### `runespect()`: the dev server
 
-A Vite plugin (`src/index.ts`) with `apply: 'serve'`, so `vite build` never runs it. It:
+A Vite plugin (`src/index.ts`) that `vite build` does not run unless `includeInRelease` is on. It:
 
 - **Adds the broadcast module** `virtual:runespect-broadcast` to the page. It calls the runtime's
   `start({ hot: import.meta.hot })`, which reports to the window (the extension) and over the hot
@@ -188,7 +188,7 @@ several at once; a flush is still diffed and recorded once.
 
 ### Who can talk to the agent
 
-Dev only: a production build carries no runespect. The window transport hears only messages its own
+A production build carries no runespect, unless `includeInRelease` puts it there. The window transport hears only messages its own
 window sent, so an iframe on the page (an ad, an embed) cannot send `edit`. The HMR broker forwards
 only messages of the kinds above; Vite's own token keeps other sites off the socket, while anyone who
 can open the app (on the LAN with `--host`) can also open the panel, and the dev server already

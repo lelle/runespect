@@ -3,6 +3,7 @@ import {
   AGENT_RUNTIME,
   agentCall,
   isNeverInstrumented,
+  reportedPath,
   symbolsSource,
   skipUnreadable,
 } from './instrument.ts';
@@ -32,7 +33,7 @@ export function instrumentModule(
   }
   const found = moduleSymbols(program);
   if (!found.length) return null;
-  const descriptor = `{ file: ${JSON.stringify(filename)}, symbols: ${symbolsSource(found)} }`;
+  const descriptor = `{ file: ${JSON.stringify(reportedPath(filename))}, symbols: ${symbolsSource(found)} }`;
   const lines = [
     '',
     '// ── injected by @runespect/vite-plugin ──',

@@ -45,6 +45,21 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
     },
+    // The playground and a SvelteKit app, built with includeInRelease, for include-in-release.spec.ts.
+    {
+      command:
+        'DEPLOY_ENV=test pnpm --filter playground exec vite build && pnpm --filter playground exec vite preview --port 5193 --strictPort',
+      url: 'http://localhost:5193/',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      command:
+        'DEPLOY_ENV=test pnpm --filter sveltekit-spa build && pnpm --filter sveltekit-spa preview --port 5194 --strictPort',
+      url: 'http://localhost:5194/',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
     // The same app under a base path, for agent-loading.spec.ts.
     {
       command: `pnpm --filter playground dev --port ${new URL(BASE_URL).port} --strictPort --base ${new URL(BASE_URL).pathname}`,

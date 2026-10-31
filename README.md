@@ -57,7 +57,7 @@ Full docs live in **[`docs/`](docs/README.md)**, organised by intent
 [lelle.github.io/runespect/docs](https://lelle.github.io/runespect/docs/):
 
 - **Learn** — [Getting started](docs/tutorials/getting-started.md)
-- **Do** — [SvelteKit](docs/how-to/use-with-sveltekit.md) ·
+- **Do** — [where to run it](docs/how-to/choose-where-to-run-it.md) · [SvelteKit](docs/how-to/use-with-sveltekit.md) ·
   [panel window](docs/how-to/open-the-panel-window.md) ·
   [overlay](docs/how-to/add-the-overlay.md) · [extension](docs/how-to/use-the-extension.md) ·
   [troubleshoot](docs/how-to/troubleshoot.md)

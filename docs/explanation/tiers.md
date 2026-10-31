@@ -21,8 +21,8 @@ value, editing, history, highlight and the element picker.
 
 **Limits:**
 
-- Dev server only. `vite build` does not run the plugin, and a production build carries none of
-  it.
+- `vite build` does not run the plugin unless `includeInRelease` is on, and a production build
+  carries none of it. See [Choose where to run it](../how-to/choose-where-to-run-it.md).
 - Only values declared at the top of a component's script, or of a `.svelte.ts` module, are shown.
   Components from `node_modules` are not instrumented.
 
