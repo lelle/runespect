@@ -41,4 +41,4 @@ that hurts someone goes out at once, smaller things are gathered. There is no fi
 4. A release of only the extension goes through the same job: it publishes nothing to npm and tags
    `@runespect/extension@x.y.z`. On a new tag, build the extension
    (`pnpm --filter @runespect/extension build`), zip `packages/extension/dist` and upload it in the
-   Chrome Web Store dashboard.
+   Chrome Web Store dashboard. `packages/extension/CHROME_WEB_STORE.md` has what to enter there.
