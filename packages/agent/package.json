@@ -1,6 +1,6 @@
 {
   "name": "@runespect/agent",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "license": "MIT",
   "type": "module",
   "description": "In-page agent for runespect: holds the component tree and live runes state the injected instrumentation reports",
