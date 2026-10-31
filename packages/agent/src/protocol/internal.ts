@@ -36,7 +36,7 @@ export interface SerializedNode {
   writable: string[];
   /** Per-symbol category for grouping in the detail pane. */
   kinds?: Record<string, SymbolKind>;
-  /** Optional source location "file:line" (Tier-1 `__svelte_meta` fallback). */
+  /** Optional source location "file:line" (names-only `__svelte_meta` fallback). */
   loc?: string;
 }
 
@@ -165,7 +165,7 @@ export interface HydrateMessage extends FromSource {
 // Version handshake: the panel sends its version on connect; the page replies with its own. The
 // reply also names the tier that is feeding the panel — 0 = the app's own runespect plugin, 2 = a
 // capture. Optional, so a page on an older agent still handshakes cleanly; the panel
-// treats a tree with no reported tier as the extension's Tier-1 DOM walk.
+// treats a tree with no reported tier as the extension's names-only DOM walk.
 export interface HelloMessage extends FromSource {
   source: typeof SOURCE;
   kind: 'hello';
@@ -271,7 +271,7 @@ export function registerMessage(tabId: number): RegisterMessage {
 // Names two contexts must agree on without sharing a module at runtime: both sides import them here.
 /** The port a devtools panel opens to the background. */
 export const PANEL_PORT = 'runespect-panel';
-/** Set on the page's window once a runespect tree owns the page, so the Tier-1 DOM walk stays quiet. */
+/** Set on the page's window once a runespect tree owns the page, so the names-only DOM walk stays quiet. */
 export const TIER0_FLAG = '__runespect_tier0';
 /** Hands events to the agent in the inspected page, from a context that can only evaluate code there. */
 export function absorbExpression(events: RunespectEvent[]): string {

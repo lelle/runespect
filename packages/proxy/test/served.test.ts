@@ -176,13 +176,13 @@ const counter = {
   writable: [],
 };
 
-// A dev-captured page keeps its __svelte_meta, so Tier 1 would post its stateless tree too and the
+// A dev-captured page keeps its __svelte_meta, so Names only would post its stateless tree too and the
 // panel would flip between the two every second.
-test('the capture bridge takes the page over from Tier 1 once it has a tree', () => {
+test('the capture bridge takes the page over from Names only once it has a tree', () => {
   expect(runBridge([counter]).tier0).toBe(true);
 });
 
-test('a capture that recorded nothing leaves the page to Tier 1', () => {
+test('a capture that recorded nothing leaves the page to Names only', () => {
   expect(runBridge([]).tier0).toBeUndefined();
 });
 

@@ -7,11 +7,11 @@ import { RUNE_FAVICON, faviconOf } from './favicon';
 
 const DEMO = 'http://localhost:5182/runespect/demo/';
 
-test('the demo shows the shop in the panel at Tier 0', async ({ page }) => {
+test('the demo shows the shop in the panel at Live', async ({ page }) => {
   await page.goto(DEMO);
   await expect(page.locator('#panel [data-select="Shop"]').first()).toBeVisible();
   await expect(page.locator('#panel [data-select="Cart"]').first()).toBeVisible();
-  await expect(page.locator('#panel', { hasText: 'Tier 0' })).toBeVisible();
+  await expect(page.locator('#panel', { hasText: 'Live' })).toBeVisible();
 });
 
 test('an edit in the panel changes the shop', async ({ page }) => {

@@ -20,7 +20,7 @@ the page. It breaks only if the public contract breaks: `$effect`, `$state.snaps
 
 The only code that reads Svelte's internals is the experimental capture in `packages/proxy` and
 `packages/prod-reader`, which is not part of the released packages (see
-[Tiers](tiers.md)).
+[What the panel can show](tiers.md)).
 
 ## Overview
 
@@ -215,10 +215,10 @@ runs in the extension's DevTools tab and in the panel window.
 itself. It renders inside its own shadow root, so the page's CSS cannot reach it, and reads the
 agent directly.
 
-The status chip comes from `src/status.ts`: **Tier 0** when the page's `hello` says so, **Tier 1**
+The status chip comes from `src/status.ts`: **Live** when the page's `hello` says so, **Names only**
 when a tree has arrived with no tier two seconds after the panel opened, and a warning for a
-protocol mismatch or when no page answers. The tiers are described in
-[Tiers](tiers.md).
+protocol mismatch or when no page answers. They are described in
+[What the panel can show](tiers.md).
 
 ## The panel window (`/__runespect/`)
 

@@ -1,15 +1,15 @@
-# Tiers: where the panel's data comes from
+# What the panel can show
 
-The panel's status chip says which tier it is talking to. Each tier is a different way of getting
+The panel's status chip says where its data comes from. Each source is a different way of getting
 the component tree, and they differ in how much they can show.
 
-| Tier                       | How you get it                          | Tree        | Live values | Editing | Source file |
-| -------------------------- | --------------------------------------- | ----------- | ----------- | ------- | ----------- |
-| **0: the plugin**          | `runespectPreprocess()` + `runespect()` | yes         | yes         | yes     | yes         |
-| **1: the extension alone** | install the extension, open a dev build | approximate | no          | no      | yes         |
-| **Capture** (experimental) | not available in a release              | yes         | read-only   | no      | no          |
+| Status                              | How you get it                          | Tree        | Live values | Editing | Source file |
+| ----------------------------------- | --------------------------------------- | ----------- | ----------- | ------- | ----------- |
+| **Live**: the plugin                | `runespectPreprocess()` + `runespect()` | yes         | yes         | yes     | yes         |
+| **Names only**: the extension alone | install the extension, open a dev build | approximate | no          | no      | yes         |
+| **Capture** (experimental)          | not available in a release              | yes         | read-only   | no      | no          |
 
-## Tier 0: the plugin
+## Live: the plugin
 
 The full tool, and what the rest of these docs describe. The app's own dev server instruments every
 component through Svelte's public API (see [Architecture](architecture.md)), so you get the tree, every
@@ -26,9 +26,9 @@ value, editing, history, highlight and the element picker.
 - Only values declared at the top of a component's script, or of a `.svelte.ts` module, are shown.
   Components from `node_modules` are not instrumented.
 
-## Tier 1: the extension on an app without the plugin
+## Names only: the extension on an app without the plugin
 
-The chip says **Tier 1**: component names only.
+The chip says **Names only**.
 
 When a page has Svelte components but no plugin, the extension builds a tree from the page itself.
 Svelte adds a `__svelte_meta` property with the source file and line to elements in a dev build; the
@@ -46,8 +46,8 @@ a Svelte dev server. Nothing to change in the app.
   are shown as one node, and a component that renders no elements of its own does not appear.
 - **Dev builds only.** A production build has no `__svelte_meta`, so the extension shows nothing.
 - **Extension only.** The panel window and the overlay come with the plugin, so they are always
-  Tier 0.
-- The panel waits two seconds before it shows the Tier 1 chip, so a slow page with the plugin does
+  Live.
+- The panel waits two seconds before it shows the Names only chip, so a slow page with the plugin does
   not flash it. A page with the plugin sets `window.__runespect_tier0`, and the extension's DOM walk
   then stays quiet.
 

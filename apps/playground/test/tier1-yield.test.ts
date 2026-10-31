@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import { startTier1 } from '../../../packages/extension/src/content-tier1';
 
-// Build a fake window whose document.body holds one __svelte_meta-tagged element, so the Tier-1
+// Build a fake window whose document.body holds one __svelte_meta-tagged element, so the names-only
 // DOM-walk finds a component. setInterval is stubbed; startTier1 runs tick() once synchronously.
 function setup(tier0: boolean) {
   const body = document.createElement('div');
@@ -27,21 +27,21 @@ function setup(tier0: boolean) {
   return { win, posted };
 }
 
-test('Tier-1 broadcasts the DOM-walk tree when Tier-0 is absent', () => {
+test('names-only broadcasts the DOM-walk tree when plugin is absent', () => {
   const { win, posted } = setup(false);
   startTier1(win, 1000);
   expect(posted.filter((m) => m.kind === 'tree')).toHaveLength(1);
 });
 
-test('Tier-1 yields (no broadcast) when Tier-0 owns the page', () => {
+test('names-only yields (no broadcast) when plugin owns the page', () => {
   const { win, posted } = setup(true);
   startTier1(win, 1000);
   expect(posted).toHaveLength(0);
 });
 
-// Tier-1 runs on every tab, and an SVG or XML document has no <body>: it must stay quiet there
+// names-only runs on every tab, and an SVG or XML document has no <body>: it must stay quiet there
 // rather than throw in the page's console once a second.
-test('Tier-1 does nothing on a document without a body', () => {
+test('names-only does nothing on a document without a body', () => {
   const { win, posted } = setup(false);
   win.document = { body: null };
   expect(() => startTier1(win, 1000)).not.toThrow();
@@ -49,7 +49,7 @@ test('Tier-1 does nothing on a document without a body', () => {
 });
 
 // Posting the whole tree every second, panel or not, would keep the service worker busy.
-test('Tier-1 posts again only when the tree changed, or when a panel asks for it', () => {
+test('names-only posts again only when the tree changed, or when a panel asks for it', () => {
   const { win, posted } = setup(false);
   startTier1(win, 1000);
   win._tick();

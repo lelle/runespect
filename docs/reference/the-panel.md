@@ -2,7 +2,7 @@
 
 What each part of the runespect panel does. The panel is the same in the window at
 `/__runespect/`, in the in-page overlay and in the extension's DevTools tab;
-[Tiers](../explanation/tiers.md) says what each source of data can show.
+[What the panel can show](../explanation/tiers.md) says what each source of data can show.
 
 ## The tree
 

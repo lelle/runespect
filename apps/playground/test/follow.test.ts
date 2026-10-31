@@ -161,7 +161,7 @@ test('a panel opened for a page asks no other page, and shows nothing, while it 
   const steps = [
     p.hear(hello('a', '/cart')),
     p.hear(tree('a')),
-    p.hear(tree()), // from-less, as the extension's Tier-1 walk sends it
+    p.hear(tree()), // from-less, as the extension's names-only walk sends it
   ];
 
   expect(p.state.followedId).toBeNull();
@@ -228,7 +228,7 @@ test('following another page forgets what the last one said', () => {
   expect(p.state.page).toEqual({ version: null, tier: null, problem: null, openInEditor: true });
 });
 
-// The extension's Tier-1 walk sends trees without `from`; the background already routes it by tab.
+// The extension's names-only walk sends trees without `from`; the background already routes it by tab.
 test('a message with no sender is shown while the panel follows a page', () => {
   const p = panel();
   p.hear(hello('a', '/cart'));

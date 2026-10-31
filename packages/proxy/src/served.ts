@@ -159,7 +159,7 @@ export function overlayModule(): string {
 }
 
 // The panel bridge, injected into the page's MAIN world during capture. It broadcasts the captured
-// tree in the Tier-0 format (window.postMessage), so the content-script relay forwards it to the
+// tree in the plugin format (window.postMessage), so the content-script relay forwards it to the
 // runespect DevTools panel. Because it is plain page code it keeps broadcasting after the host stops
 // injecting, so the panel reads the instrumentation that capture left behind. Responds to the
 // panel's `request` and polls for live updates. Read-only, like the overlay.
@@ -188,9 +188,9 @@ export function bridgeModule(): string {
   const post = () => {
     const nodes = snapshot();
     // [] is truthy — only broadcast a non-empty tree, else a capture with no recorded data would
-    // clobber another source's tree (e.g. Tier-1) in the panel with an empty one.
+    // clobber another source's tree (e.g. names-only) in the panel with an empty one.
     if (!nodes || !nodes.length) return;
-    // A dev-captured page still carries __svelte_meta, so Tier 1 would post its stateless tree too
+    // A dev-captured page still carries __svelte_meta, so Names only would post its stateless tree too
     // and the panel would flip between the two. Once there is a tree, the page is ours.
     g[${JSON.stringify(TIER0_FLAG)}] = true;
     window.postMessage({ source: 'runespect', kind: 'tree', nodes: clean(nodes) }, '*');

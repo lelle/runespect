@@ -67,7 +67,7 @@ Full docs live in **[`docs/`](docs/README.md)**, organised by intent
 - **Look up** — [The panel](docs/reference/the-panel.md) · [Options](docs/reference/options.md) ·
   [Console API](docs/reference/console-api.md) · [Packages](docs/reference/packages.md)
 - **Understand** — [Architecture](docs/explanation/architecture.md) ·
-  [Tiers](docs/explanation/tiers.md) · [What it costs](docs/explanation/what-it-costs.md)
+  [What the panel can show](docs/explanation/tiers.md) · [What it costs](docs/explanation/what-it-costs.md)
 
 To work on runespect itself, see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 

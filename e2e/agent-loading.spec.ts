@@ -21,5 +21,5 @@ test('under a base path, the agent loads and the panel window gets the tree with
   await panel.goto(`${BASE_URL}__runespect/?source=${encodeURIComponent('/app/?case=base')}`);
   await panel.locator('[data-select="Counter"]').first().click();
   await expect(panel.locator('[data-detail-edit="Counter.count"]').first()).toHaveValue('1');
-  await expect(panel.locator('[data-testid="runespect-status"]')).toHaveText('Tier 0');
+  await expect(panel.locator('[data-testid="runespect-status"]')).toHaveText('Live');
 });

@@ -120,7 +120,7 @@ function refollow(before: Following, next: Following): FollowStep {
 }
 
 // What the followed page did not say is not the panel's to show. A message without a sender (the
-// extension's Tier-1 walk, already routed by tab) belongs to whatever page is followed. A panel that
+// extension's names-only walk, already routed by tab) belongs to whatever page is followed. A panel that
 // waits for its url shows nothing; one that follows nothing yet shows what it hears, since after a
 // reconnect a page sends its tree before its hello.
 function belongsToFollowed(msg: { from?: string }, state: Following): boolean {

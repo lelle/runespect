@@ -106,17 +106,17 @@ test('the settings menu reports the build the panel is running', async ({ page }
 test('the status chip names the tier feeding the panel', async ({ page }) => {
   await page.goto('/panel.html');
   const status = page.locator('[data-testid="runespect-status"]');
-  // The harness runs the app's own agent, so the handshake reports Tier 0 — the panel says so
+  // The harness runs the app's own agent, so the handshake reports Live — the panel says so
   // rather than leaving the user to guess why (or whether) live state is available.
   await expect(status).toHaveAttribute('data-level', 'ok');
-  await expect(status).toHaveText('Tier 0');
+  await expect(status).toHaveText('Live');
 });
 
 test('the runtime event log is published to the page and covers the whole chain', async ({
   page,
 }) => {
   await page.goto('/panel.html');
-  await expect(page.locator('[data-testid="runespect-status"]')).toHaveText('Tier 0');
+  await expect(page.locator('[data-testid="runespect-status"]')).toHaveText('Live');
 
   // Read both in one go: the log is live, so two round-trips can straddle a new event.
   const { events, dumped } = await page.evaluate(() => {

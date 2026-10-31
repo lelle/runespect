@@ -44,7 +44,7 @@ devtools: http://localhost:5173/__runespect/
 ```
 
 Put the two windows side by side. The panel shows your app's component tree on the left, and its
-status chip says **Tier 0**: the plugin is reporting.
+status chip says **Live**: the plugin is reporting.
 
 ## 4. Look at a component
 

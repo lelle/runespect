@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Drives the real Tier-0 product path (vite-plugin preprocessor + broadcast +
+// Drives the real plugin product path (vite-plugin preprocessor + broadcast +
 // <Inspect> overlay) in a real browser. Uses Google Chrome (channel: 'chrome'), the browser most
 // devtools users have: locally the installed one, in CI one `playwright install chrome` fetches. The playground dev server is started automatically, on its
 // own port: Vite's default 5173 is where any other project's dev server sits, and reusing one of

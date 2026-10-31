@@ -84,4 +84,4 @@ see in the panel to what to read in the log.
 Failures this makes visible: a relay that silently
 dropped a message kind, a value the wire refused (`ev: 'drop'`, `error: 'DataCloneError'`), a panel
 port taken down with the idle service worker (`disconnect` with no `reconnect`), and a page that
-never announced its tier (no `tier` event, so the panel reports Tier 1).
+never announced its tier (no `tier` event, so the panel reports Names only).

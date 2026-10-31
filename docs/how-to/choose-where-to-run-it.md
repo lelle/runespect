@@ -3,17 +3,17 @@
 What runespect shows depends on how the app is served. `vite dev` with the plugin is the baseline,
 and everything works there. Elsewhere, this is what you get:
 
-| How the app runs                                           | Panel window | Overlay | Extension |
-| ---------------------------------------------------------- | ------------ | ------- | --------- |
-| `vite dev`, local or on a shared server                    | Tier 0       | Tier 0  | Tier 0    |
-| `vite dev` with `server.hmr: false`                        | Tier 0       | Tier 0  | Tier 0    |
-| `vite dev` with no WebSocket (`server.ws: false`, a proxy) | no           | Tier 0  | Tier 0    |
-| `vite build` with `includeInRelease`, deployed             | Tier 0       | no      | Tier 0    |
-| `NODE_ENV=development vite build`, deployed                | no           | no      | Tier 1    |
-| `vite build`, deployed                                     | no           | no      | nothing   |
+| How the app runs                                           | Panel window | Overlay | Extension  |
+| ---------------------------------------------------------- | ------------ | ------- | ---------- |
+| `vite dev`, local or on a shared server                    | Live         | Live    | Live       |
+| `vite dev` with `server.hmr: false`                        | Live         | Live    | Live       |
+| `vite dev` with no WebSocket (`server.ws: false`, a proxy) | no           | Live    | Live       |
+| `vite build` with `includeInRelease`, deployed             | Live         | no      | Live       |
+| `NODE_ENV=development vite build`, deployed                | no           | no      | Names only |
+| `vite build`, deployed                                     | no           | no      | nothing    |
 
-[Tiers](../explanation/tiers.md) explains the difference: Tier 0 has values, editing and history, and
-Tier 1 has only an approximate tree of component names.
+[What the panel can show](../explanation/tiers.md) explains the difference: Live has values, editing
+and history, and Names only has only an approximate tree of component names.
 
 ## On a dev or test environment
 
@@ -54,7 +54,7 @@ serves them the source. Keep such an environment closed to the outside.
 
 ## Component names only
 
-Without the plugin in the build, a development build gives Tier 1 in the extension:
+Without the plugin in the build, a development build gives Names only in the extension:
 
 ```sh
 NODE_ENV=development vite build
