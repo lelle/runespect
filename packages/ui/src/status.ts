@@ -1,5 +1,5 @@
 // What the panel is connected to, as one line of UI. The page tells us its tier in the handshake
-// (see HelloMessage.tier); a tree with no handshake behind it is the extension's Tier-1 DOM walk,
+// (see HelloMessage.tier); a tree with no handshake behind it is the extension's names-only DOM walk,
 // which yields names and source locations but no reactive state. Pure so the state machine — and
 // especially the severity order — is unit-testable.
 
@@ -16,6 +16,8 @@ export interface PanelStatus {
   /** The explanation, shown when the panel expands the status into a bar. */
   detail?: string;
   docsUrl?: string;
+  /** What the link to docsUrl says, when it says more than the default. */
+  docsLabel?: string;
 }
 
 export interface StatusInput {
@@ -42,7 +44,7 @@ export function panelStatus(input: StatusInput): PanelStatus {
     };
   }
   if (input.tier === 0) {
-    return { level: 'ok', label: 'Tier 0', detail: "live state from the app's runespect plugin" };
+    return { level: 'ok', label: 'Live', detail: "live state from the app's runespect plugin" };
   }
   // A capture reads Svelte's private runtime, which can change on any minor, and cannot edit.
   if (input.tier === 2 && input.problem) {
@@ -62,14 +64,15 @@ export function panelStatus(input: StatusInput): PanelStatus {
       docsUrl: TIER_DOCS_URL,
     };
   }
-  // A Tier-0 page that boots slowly can lose the race to Tier 1's first tree, so a tier-less tree
+  // A plugin page that boots slowly can lose the race to the names-only first tree, so a tier-less tree
   // only becomes a verdict once the grace period is up.
   if (input.hasTree && input.graceElapsed) {
     return {
       level: 'warn',
-      label: 'Tier 1',
+      label: 'Names only',
       detail: 'component names only — no live state, editing or highlight.',
       docsUrl: TIER_DOCS_URL,
+      docsLabel: 'Add the plugin for live state',
     };
   }
   if (input.graceElapsed && !input.hasTree) {

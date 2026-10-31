@@ -35,9 +35,9 @@ In a build with `includeInRelease`, the panel is files in the build's `__runespe
 your host serves that folder, and keep the slash at the end of the address: without it, the panel
 looks for its files in the wrong place. Some hosts treat a folder that starts with `_` specially.
 
-## The panel says "Tier 1 — component names only"
+## The panel says "Names only"
 
-The page never told the panel which tier it is. Either the app isn't instrumented, or the
+The page never told the panel that it runs the plugin. Either the app isn't instrumented, or the
 handshake did not arrive.
 
 ```js
@@ -51,8 +51,8 @@ window.__runespect.events.filter((e) => e.kind === 'hello');
 | `tier0` true, no `hello` in the events | the agent never announced; check the `agent` hop exists at all |
 | `hello` in `agent` but not in `panel`  | it died in the chain — find the last hop that has it           |
 
-Nothing wrong with Tier 1 itself: it is the DOM-walk fallback and it cannot carry state. To get
-live values, add the plugin to the app ([Tiers](../explanation/tiers.md)).
+Nothing wrong with Names only itself: it is the DOM-walk fallback and it cannot carry state. To get
+live values, add the plugin to the app ([What the panel can show](../explanation/tiers.md)).
 
 ## The tree was live, then stopped updating
 

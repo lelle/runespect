@@ -70,7 +70,7 @@ const askAsAPanel = (page: Page) =>
     return { hello: seen.hello, tree: seen.tree };
   });
 
-test('a panel sees Tier 0, a tree, and no Open in editor', async ({ page }) => {
+test('a panel sees Live, a tree, and no Open in editor', async ({ page }) => {
   await page.goto(PLAYGROUND);
   await page.waitForFunction(() => window.__runespect?.tree().length);
 

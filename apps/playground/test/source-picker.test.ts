@@ -37,7 +37,7 @@ test('one source: the panel names what it is looking at, with nothing to choose'
   const { target, emit } = panelWith();
   emit(hello('a', '/cart', 'Cart'));
 
-  expect(status(target).textContent).toBe('Tier 0'); // the tier chip stays exactly that
+  expect(status(target).textContent).toBe('Live'); // the tier chip stays exactly that
   expect(source(target).textContent).toContain('/cart');
   expect(source(target).tagName).toBe('SPAN'); // nothing to pick, so nothing to click
   expect(picker(target)).toBeNull();

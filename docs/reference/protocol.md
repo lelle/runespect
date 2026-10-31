@@ -25,7 +25,7 @@ other direction's kinds. The window transport and the HMR broker hand a sender i
 so a kind that one side both sent and handled would loop. The compiler rejects a kind that is in
 neither list.
 
-A message without `from` is from a page that has no agent: the extension's Tier 1 walk or the Tier 2
+A message without `from` is from a page that has no agent: the extension's Names only walk or the capture
 capture (see [Other senders](#other-senders)). A command without `to` is for whoever hears it, which
 is what the extension relies on: its service worker already routes by tab.
 
@@ -109,7 +109,7 @@ the answer to every `request`.
 | Field          | Type      | Meaning                                                                     |
 | -------------- | --------- | --------------------------------------------------------------------------- |
 | `version`      | `number`  | the page's `PROTOCOL_VERSION`; the panel warns when it differs from its own |
-| `tier`         | `0 \| 2`  | `0` from the agent, `2` from the capture; absent means Tier 1               |
+| `tier`         | `0 \| 2`  | `0` from the agent, `2` from the capture; absent means Names only           |
 | `problem`      | `string?` | why a capture recorded nothing                                              |
 | `url`          | `string?` | path and query, with secret-looking query values replaced by `…`            |
 | `title`        | `string?` | the page's `document.title`                                                 |
@@ -283,11 +283,11 @@ once; a flush is still diffed once and every transport sends the same commit.
 Two senders speak the page's side without the agent. Neither stamps `from`, and neither handles
 `edit`.
 
-- **Tier 1** (`extension/src/content-tier1.ts`): on a dev Svelte page without the plugin, the
+- **Names only** (`extension/src/content-tier1.ts`): on a dev Svelte page without the plugin, the
   extension walks the DOM's `__svelte_meta` and posts a `tree` with names and locations but no values.
   It posts when the tree changed and on any `request`, sends no `hello`, and stays quiet once the
   page's window has `__runespect_tier0` (`TIER0_FLAG`), which the agent and the capture set. A panel
-  that has a tree and no tier two seconds after it opened shows Tier 1.
+  that has a tree and no tier two seconds after it opened shows Names only.
 - **Tier 2** (`packages/proxy`, experimental): the capture's bridge posts a `hello` with `tier: 2`,
   the shared `PROTOCOL_VERSION` and a `problem` when the capture found nothing, and a read-only `tree`
-  encoded with the same `dehydrate()`. See [Tiers](../explanation/tiers.md).
+  encoded with the same `dehydrate()`. See [What the panel can show](../explanation/tiers.md).

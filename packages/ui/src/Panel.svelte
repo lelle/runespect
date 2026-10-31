@@ -169,8 +169,8 @@
 
   // ── which source is feeding us ──
   // The page names its tier in the handshake; a tree that arrives without one is the extension's
-  // Tier-1 DOM walk. We wait GRACE_MS before saying so, since a slow Tier-0 page can lose the race
-  // to Tier 1's first broadcast and would otherwise flash a warning it doesn't deserve.
+  // names-only DOM walk. We wait GRACE_MS before saying so, since a slow plugin page can lose the race
+  // to the names-only walk's first broadcast and would otherwise flash a warning it doesn't deserve.
   const GRACE_MS = 2000;
   // The page turns it off with runespect({ openInEditor: false }) and says so in its hello.
   let openInEditor = $derived(following.page.openInEditor);
@@ -311,7 +311,9 @@
       <span class="status-label">⚠ {status.label}</span>
       <span class="status-detail">{status.detail}</span>
       {#if status.docsUrl}
-        <a href={status.docsUrl} target="_blank" rel="noreferrer">How to get live state ↗</a>
+        <a href={status.docsUrl} target="_blank" rel="noreferrer"
+          >{status.docsLabel ?? 'How to get live state'} ↗</a
+        >
       {/if}
     </div>
   {/if}
@@ -347,7 +349,7 @@
       bind:value={exclude}
     />
     {#if status.level !== 'warn'}
-      <!-- Collapsed: a chip, so you can always tell Tier 0 from Tier 1 or a capture without losing a row. -->
+      <!-- Collapsed: a chip, so you can always tell Live from Names only or a capture without losing a row. -->
       <span
         class="status-chip"
         data-testid="runespect-status"

@@ -77,7 +77,7 @@ test('agent does NOT reply to a hello — guards the window-transport echo loop'
 
 // Reloading the page with DevTools already open puts the panel's one-shot `request` before the new
 // page's agent exists: trees then flow (the broadcast posts them) but the handshake never happens,
-// so the panel reports Tier 1 on a perfectly good Tier-0 page. The agent therefore announces itself
+// so the panel reports Names only on a perfectly good plugin page. The agent therefore announces itself
 // when it connects, instead of only when asked.
 test('agent announces its hello on connect, without waiting to be asked', () => {
   const sent: any[] = [];

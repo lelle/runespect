@@ -23,7 +23,7 @@ test('the panel window renders the app tree over the dev-server channel', async 
 
   await expect(panel.locator('[data-select="Showcase"]').first()).toBeVisible();
   await expect(panel.locator('[data-select="Counter"]').first()).toBeVisible();
-  await expect(panel.locator('[data-testid="runespect-status"]')).toHaveText('Tier 0');
+  await expect(panel.locator('[data-testid="runespect-status"]')).toHaveText('Live');
 });
 
 test('editing from the panel window changes the app in the other tab', async ({ context }) => {

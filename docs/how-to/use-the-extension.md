@@ -21,10 +21,10 @@ Open a page of a Svelte app in development, open DevTools, and pick the **runesp
 tab shows depends on the page:
 
 - **The app uses the plugin:** the full panel, the same as the panel window. The status chip says
-  **Tier 0**.
+  **Live**.
 - **The app does not use the plugin:** on a development build of Svelte 5, the component tree and
   the file each component comes from, read from the page's elements. There are no values and no
-  editing, and the chip says **Tier 1**. [Tiers](../explanation/tiers.md) has what each tier can
+  editing, and the chip says **Names only**. [What the panel can show](../explanation/tiers.md) has what each can
   show.
 
 ## After rebuilding the extension

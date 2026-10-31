@@ -46,7 +46,7 @@ test('the icon PNGs were rendered from the current icon.png and icon-small.png',
   expect(rendered).toBe(hash.digest('hex'));
 });
 
-// `world: "MAIN"` in a content script needs Chrome 111; on 110 the Tier-1 script would run in the
+// `world: "MAIN"` in a content script needs Chrome 111; on 110 the names-only script would run in the
 // isolated world, where `__svelte_meta` cannot be seen.
 test('the minimum Chrome version covers the features the manifest uses', () => {
   const usesMainWorld = manifest.content_scripts.some(

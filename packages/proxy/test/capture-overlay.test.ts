@@ -49,7 +49,7 @@ test('bridgeModule does NOT broadcast an empty tree (capture with no recorded da
   window.removeEventListener('message', onMsg);
 });
 
-test('bridgeModule broadcasts the tree (Tier-0 format) and answers panel requests', async () => {
+test('bridgeModule broadcasts the tree (plugin format) and answers panel requests', async () => {
   // a function value (e.g. dev HMR wrapper / snippet) must not break structured clone
   (globalThis as any).__runespectReconstruct = () => {
     const t = tree();

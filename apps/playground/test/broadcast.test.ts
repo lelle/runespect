@@ -101,7 +101,7 @@ test('without SvelteKit, runespect() keeps its transformIndexHtml', () => {
 });
 
 // SvelteKit renders app.html itself, so transformIndexHtml never runs and the broadcast script is
-// never injected — the symptom is a panel stuck on Tier 1 (names, no state). The plugin therefore
+// never injected — the symptom is a panel stuck on Names only (names, no state). The plugin therefore
 // also hangs the broadcast off the module graph, at SvelteKit's generated client entry.
 test('runespect() also injects the broadcast into SvelteKit’s generated client entry', () => {
   const plugin: any = runespect();

@@ -44,5 +44,5 @@ kinds, so it is clear whether you are learning, doing, or looking something up.
 ### Explanation — understanding
 
 - [Architecture](explanation/architecture.md) — from a component to a row in the panel.
-- [Tiers](explanation/tiers.md) — where the panel's data comes from, and what each source can show.
+- [What the panel can show](explanation/tiers.md) — where the panel's data comes from, and what each source can show.
 - [What it costs](explanation/what-it-costs.md) — the time the instrumentation adds per flush.

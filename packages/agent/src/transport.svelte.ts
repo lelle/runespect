@@ -103,10 +103,10 @@ export function connect(transport: Transport): () => void {
     first = false;
   };
 
-  // Tier 0: this tree comes from the app's own instrumentation, so the panel can offer edits,
+  // Live: this tree comes from the app's own instrumentation, so the panel can offer edits,
   // highlighting and the picker. Announced on connect rather than only when asked — a panel that
   // was already open sent its one `request` before this page existed, and would otherwise show a
-  // live Tier-0 app as Tier 1 forever.
+  // live plugin app as Names only forever.
   const announce = (): void =>
     send(
       helloMessage(PROTOCOL_VERSION, 0, {
@@ -176,7 +176,7 @@ export function connect(transport: Transport): () => void {
 // disconnect function.
 export function broadcast(): () => void {
   if (typeof window === 'undefined') return () => {};
-  // Signal that the rich Tier-0 broadcaster owns this page so the Tier-1 DOM-walk fallback
+  // Signal that the rich plugin broadcaster owns this page so the names-only DOM-walk fallback
   // (content-main) stays quiet — otherwise its stateless tree would clobber ours in the panel.
   (window as unknown as Record<string, unknown>)[TIER0_FLAG] = true;
   const stop = connect(createWindowTransport(window));

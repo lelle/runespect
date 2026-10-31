@@ -50,7 +50,7 @@ it.
 ### `includeInRelease`
 
 Builds the agent and the instrumentation into the app, for a dev or test environment without a dev
-server. The extension and the panel window at `/__runespect/` then show the app as Tier 0, and
+server. The extension and the panel window at `/__runespect/` then show the app as Live, and
 **Open in editor** is off. The window is plain files next to the app, loaded only when someone opens
 the address. It reaches the page through the browser, so it has to be open in the same browser, on
 the same origin, as the app. The overlay is not part of this.

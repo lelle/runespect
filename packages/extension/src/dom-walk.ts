@@ -1,6 +1,6 @@
 import { componentName, type SerializedNode } from '@runespect/agent/protocol/internal';
 
-// Tier-1 fallback: zero-setup inspection of any dev-mode Svelte tab from the rendered DOM, with no
+// names-only fallback: zero-setup inspection of any dev-mode Svelte tab from the rendered DOM, with no
 // instrumentation — so it coexists with the user's DevTools. Svelte attaches
 // `__svelte_meta.loc` ({ file, line }) to elements in dev builds. We read which component each
 // element belongs to and derive a component tree from DOM containment: a component's child

@@ -8,7 +8,7 @@ const withMeta = (tag: string, file: string, line: number): HTMLElement => {
   return el;
 };
 
-test('Tier-1 DOM walk lists distinct components + source locations from __svelte_meta', () => {
+test('names-only DOM walk lists distinct components + source locations from __svelte_meta', () => {
   const root = document.createElement('div');
   const h1 = withMeta('h1', 'src/App.svelte', 5);
   const btn1 = withMeta('button', 'src/Counter.svelte', 9);

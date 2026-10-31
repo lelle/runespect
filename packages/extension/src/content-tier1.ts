@@ -1,14 +1,14 @@
 import { TIER0_FLAG, treeMessage } from '@runespect/agent/protocol/internal';
 import { componentsFromSvelteMeta } from './dom-walk.js';
 
-// Tier-1 fallback content script: on any dev Svelte tab that does NOT use the runespect plugin,
+// names-only fallback content script: on any dev Svelte tab that does NOT use the runespect plugin,
 // post the DOM-derived component list (names + source locations, no state) so the panel can still
 // show something. The relay forwards these `tree` messages like any other. The walk runs every
 // interval on every tab; the tree is posted only when it changed, or when a panel asks for it.
 export function startTier1(win: Window = window, intervalMs = 1000): () => void {
   let last = '';
   const post = (force: boolean): void => {
-    // Yield to Tier-0: if the page runs the runespect plugin's broadcaster, its rich tree (with
+    // Yield to plugin: if the page runs the runespect plugin's broadcaster, its rich tree (with
     // state) owns the panel. Broadcasting our stateless DOM-walk would make the panel collapse to
     // it. Checked every time so ordering between the plugin and this script doesn't matter.
     if ((win as unknown as Record<string, unknown>)[TIER0_FLAG]) return;

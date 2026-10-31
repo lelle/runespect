@@ -29,7 +29,7 @@ const status = (t: HTMLElement) =>
 test('a page that reports its tier shows a quiet chip, not a warning', () => {
   const { target, emit } = panelWith();
   emit(helloMessage(PROTOCOL_VERSION, 0));
-  expect(status(target).textContent).toContain('Tier 0');
+  expect(status(target).textContent).toContain('Live');
   expect(status(target).dataset.level).toBe('ok');
   expect(status(target).querySelector('a')).toBeNull(); // nothing to read up on
 });
@@ -41,19 +41,20 @@ test('a capture is shown as experimental', () => {
   expect(status(target).dataset.level).toBe('warn');
 });
 
-test('a tree with no handshake becomes a Tier 1 warning once the grace period passes', () => {
+test('a tree with no handshake becomes a Names only warning once the grace period passes', () => {
   const { target, emit } = panelWith();
   emit(treeMessage([node]));
-  expect(status(target).dataset.level).toBe('waiting'); // a slow Tier 0 may still announce itself
+  expect(status(target).dataset.level).toBe('waiting'); // a slow Live may still announce itself
 
   vi.advanceTimersByTime(3000);
   flushSync();
   expect(status(target).dataset.level).toBe('warn');
-  expect(status(target).textContent).toContain('Tier 1');
+  expect(status(target).textContent).toContain('Names only');
   expect(status(target).querySelector('a')!.getAttribute('href')).toBe(TIER_DOCS_URL);
+  expect(status(target).querySelector('a')!.textContent).toContain('Add the plugin for live state');
 });
 
-test('a late Tier-0 handshake clears the Tier 1 warning', () => {
+test('a late plugin handshake clears the Names only warning', () => {
   const { target, emit } = panelWith();
   emit(treeMessage([node]));
   vi.advanceTimersByTime(3000);
@@ -62,7 +63,7 @@ test('a late Tier-0 handshake clears the Tier 1 warning', () => {
 
   emit(helloMessage(PROTOCOL_VERSION, 0));
   expect(status(target).dataset.level).toBe('ok');
-  expect(status(target).textContent).toContain('Tier 0');
+  expect(status(target).textContent).toContain('Live');
 });
 
 test('a protocol mismatch takes over the same bar instead of adding a second one', () => {
