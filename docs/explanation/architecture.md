@@ -121,9 +121,10 @@ With `includeInRelease`, `vite build` runs it too, and it differs in these ways:
 
 - `RUNESPECT_RELEASE_ROOT` takes the place of `RUNESPECT_DEV_SERVER` for as long as an environment
   builds. It also holds the project root, because paths in a build are relative to it.
-- The broadcast module calls `start({ inBuild: true })`, and Open in editor is off.
+- The broadcast module passes `pageChannel()` as the channel, and Open in editor is off.
 - There is no broker and no middleware. The panel window goes in the build as files, with a `meta` tag
-  that tells it to use `pageChannel()` in place of the dev server's channel.
+  that tells it to use `pageChannel()` in place of the dev server's channel. With
+  `panelInRelease: false`, neither the files nor the channel are in the build.
 
 ## 2. The agent (`packages/agent`)
 

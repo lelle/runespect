@@ -40,6 +40,7 @@ A Vite plugin that applies only to the dev server, unless `includeInRelease` is 
 | ------------------ | --------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
 | `openInEditor`     | `boolean` | `true`  | `false` removes **Open in editor** from the panel window, the overlay and the extension. Its links open VS Code. |
 | `includeInRelease` | `boolean` | `false` | `true` builds runespect into the code `vite build` produces. See below.                                          |
+| `panelInRelease`   | `boolean` | `true`  | With `includeInRelease`, `false` leaves the panel window out of the build.                                       |
 
 Turn `openInEditor` off when your editor does not open `vscode://` links, or when the dev server
 runs on another machine than your editor.
@@ -65,6 +66,14 @@ a build is for, so:
 
 - Write the test so a forgotten variable gives a clean build: `=== 'test'`, not `!== 'production'`.
 - Build separately for each environment. A build promoted from test to production keeps runespect.
+
+When the extension is all you use, leave the window out, so there is no folder to remove in CI:
+
+```ts
+runespect({ includeInRelease: process.env.DEPLOY_ENV === 'test', panelInRelease: false });
+```
+
+The state can still be read from `window.__runespect` and edited from the extension.
 
 The build log says when it is on, and the build grows: 25 KB before compression on our playground.
 

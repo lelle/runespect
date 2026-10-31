@@ -37,6 +37,11 @@ export interface RunespectOptions {
    * state, so never let it reach production.
    */
   includeInRelease?: boolean;
+  /**
+   * With `includeInRelease`, also put the panel window at `/__runespect/` in the build. Default
+   * `true`; turn it off when the extension is all you use.
+   */
+  panelInRelease?: boolean;
 }
 
 // The dev servers in this process that runespect() serves. The flag runespectPreprocess() reads is
@@ -79,6 +84,7 @@ export function runespect(options: RunespectOptions = {}): Plugin {
     '.svelte-kit/generated/build/client-optimized/app.js',
   ];
   const RESOLVED = '\0' + VIRTUAL;
+  const withPanel = options.panelInRelease !== false;
   let releaseRoot: string | undefined;
   let logger: Logger | undefined;
   // SvelteKit builds several environments in turn, each between a buildStart and a closeBundle.
@@ -115,14 +121,14 @@ export function runespect(options: RunespectOptions = {}): Plugin {
       if (this.environment.name === 'client') {
         logger?.warn(
           '[runespect] includeInRelease is on. This build exposes component state and lets ' +
-            'anyone edit it, also at /__runespect/. Do not deploy it to production.',
+            `anyone edit it${withPanel ? ', also at /__runespect/' : ''}. Do not deploy it to production.`,
         );
       }
     },
     // The panel window as plain files next to the app: nothing loads them until someone opens the
     // address, and they reach the page through the browser, with no server.
     generateBundle() {
-      if (!releaseRoot || this.environment.name !== 'client') return;
+      if (!releaseRoot || !withPanel || this.environment.name !== 'client') return;
       if (!panelExists(logger)) return;
       for (const file of readdirSync(panelDir(), { recursive: true, encoding: 'utf8' })) {
         const from = path.join(panelDir(), file);
@@ -170,9 +176,14 @@ export function runespect(options: RunespectOptions = {}): Plugin {
       // Two consumers, one agent: window.postMessage feeds the browser extension, and Vite's HMR
       // channel feeds the standalone panel window at /__runespect/; start() attaches both.
       const off = options.openInEditor === false || !!releaseRoot;
+      const startOptions = [
+        ...(!releaseRoot ? ['hot: import.meta.hot'] : []),
+        ...(releaseRoot && withPanel ? [`hot: ${agentCall('pageChannel')}`] : []),
+        ...(off ? ['openInEditor: false'] : []),
+      ];
       return [
         `import * as __runespect from ${JSON.stringify(AGENT_RUNTIME)};`,
-        `${agentCall('start', `{ ${releaseRoot ? 'inBuild: true' : 'hot: import.meta.hot'}${off ? ', openInEditor: false' : ''} }`)};`,
+        `${agentCall('start', `{ ${startOptions.join(', ')} }`)};`,
         ``,
       ].join('\n');
     },

@@ -16,7 +16,8 @@ also works over https.
 With [`includeInRelease`](../reference/options.md#includeinrelease), `vite build` puts the panel next
 to the app, at the same address. There is no dev server between them: the two reach each other through
 the browser, so open them in tabs of the same browser, on the same origin. Keep the slash at the end
-of the address. A panel on one machine cannot follow an app on another.
+of the address. A panel on one machine cannot follow an app on another. `panelInRelease: false`
+leaves the window out of the build.
 
 ## Under a Vite `base`
 
