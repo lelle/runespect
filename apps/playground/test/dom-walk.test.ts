@@ -83,3 +83,31 @@ test('startTier1 posts a tree message of the DOM-derived components', async () =
   stop();
   window.removeEventListener('message', handler);
 });
+
+// Markup a parent passes as a snippet sits inside the child that renders it, so the parent's file is
+// inside the child's and the child's inside the parent's. Every file is then someone's child.
+function snippetPage(): HTMLElement {
+  const tagged = (tag: string, file: string, ...children: Element[]): HTMLElement => {
+    const el = document.createElement(tag);
+    (el as any).__svelte_meta = { loc: { file, line: 1 } };
+    el.append(...children);
+    return el;
+  };
+  const root = document.createElement('div');
+  root.append(
+    tagged(
+      'section',
+      'src/App.svelte',
+      tagged('div', 'src/Card.svelte', tagged('p', 'src/App.svelte')),
+    ),
+  );
+  return root;
+}
+
+test('a snippet passed to a child does not leave the tree without a root', () => {
+  const nodes = componentsFromSvelteMeta(snippetPage());
+
+  expect(nodes.map((n) => n.name)).toEqual(['App', 'Card']);
+  expect(nodes[0].parent).toBeNull();
+  expect(nodes[1].parent).toBe(nodes[0].id);
+});

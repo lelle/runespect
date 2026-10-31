@@ -42,7 +42,8 @@ a Svelte dev server. Nothing to change in the app.
 
 - **No values, no editing, no highlight and no picker.** Svelte's state is not reachable from the
   DOM.
-- **The tree is approximate.** Nesting is taken from the DOM. All instances of one component file
+- **The tree is approximate.** Nesting is taken from the DOM, so a component that renders markup
+  passed as a snippet can look like the parent of what passed it. All instances of one component file
   are shown as one node, and a component that renders no elements of its own does not appear.
 - **Dev builds only.** A production build has no `__svelte_meta`, so the extension shows nothing.
 - **Extension only.** The panel window and the overlay come with the plugin, so they are always
