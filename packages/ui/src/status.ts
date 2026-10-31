@@ -76,7 +76,8 @@ export function panelStatus(input: StatusInput): PanelStatus {
     return {
       level: 'warn',
       label: 'No app',
-      detail: 'no page has answered — is it open, and does its Vite config have runespect()?',
+      detail:
+        'no page has answered — is it open in this browser, and does its Vite config have runespect()?',
       docsUrl: TROUBLESHOOTING_URL,
     };
   }

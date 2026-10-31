@@ -270,6 +270,30 @@ export function createHotTransport(hot: HotChannel): Transport {
   };
 }
 
+/**
+ * The hot channel's shape between the documents of one origin, for a build: no dev server, and the
+ * browser delivers to every other document, as Vite's broker does.
+ */
+export function pageChannel(): HotChannel {
+  const channel = new BroadcastChannel(HOT_EVENT);
+  const handlers = new Map<(data: unknown) => void, (event: MessageEvent) => void>();
+  return {
+    send: (event, data) => channel.postMessage({ event, data }),
+    on(event, cb) {
+      const handler = (e: MessageEvent): void => {
+        if (e.data?.event === event) cb(e.data.data);
+      };
+      handlers.set(cb, handler);
+      channel.addEventListener('message', handler);
+    },
+    off(_, cb) {
+      const handler = handlers.get(cb);
+      if (handler) channel.removeEventListener('message', handler);
+      handlers.delete(cb);
+    },
+  };
+}
+
 export function resetTransport(): void {
   for (const disconnect of [...connections]) disconnect();
   editorLinks.on = true;

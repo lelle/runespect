@@ -4,6 +4,7 @@ import path from 'node:path';
 import { build, createLogger, type Rollup } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { runespectPreprocess, runespect } from '@runespect/vite-plugin';
+import { releasePanelHtml } from '@runespect/vite-plugin/internal';
 
 // includeInRelease puts runespect in the code `vite build` produces. What that build does in a
 // browser is in e2e/include-in-release.spec.ts; this is what it contains.
@@ -12,7 +13,7 @@ const appDir = path.resolve(import.meta.dirname, 'fixtures/release-app');
 
 async function buildApp(
   includeInRelease?: boolean,
-): Promise<{ bundle: string; warnings: string[] }> {
+): Promise<{ bundle: string; warnings: string[]; panel: Record<string, string> }> {
   const warnings: string[] = [];
   const customLogger = createLogger('silent');
   customLogger.warn = (message) => void warnings.push(message);
@@ -26,7 +27,12 @@ async function buildApp(
   const bundle = output.output
     .map((file) => ('code' in file ? file.code : String(file.source)))
     .join('\n');
-  return { bundle, warnings };
+  const panel = Object.fromEntries(
+    output.output
+      .filter((file) => file.fileName.startsWith('__runespect/'))
+      .map((file) => [file.fileName, 'source' in file ? String(file.source) : '']),
+  );
+  return { bundle, warnings, panel };
 }
 
 beforeEach(() => {
@@ -38,11 +44,12 @@ afterEach(() => vi.unstubAllEnvs());
 test.each([undefined, false])(
   'includeInRelease: %s builds nothing of runespect',
   async (value) => {
-    const { bundle, warnings } = await buildApp(value);
+    const { bundle, warnings, panel } = await buildApp(value);
 
     expect(bundle).toContain('count');
     expect(/runespect/i.test(bundle)).toBe(false);
     expect(warnings.join()).not.toContain('includeInRelease');
+    expect(panel).toEqual({});
   },
   60_000,
 );
@@ -76,3 +83,17 @@ test('a build after it, in the same process, is clean again', async () => {
 
   expect(/runespect/i.test(bundle)).toBe(false);
 }, 60_000);
+
+test('the build log names the panel window', async () => {
+  const { warnings } = await buildApp(true);
+
+  expect(warnings.join()).toContain('/__runespect/');
+}, 60_000);
+
+test('the panel window in a build is told to reach the page without a dev server', () => {
+  const html = releasePanelHtml('<html><head><title>runespect</title></head></html>');
+
+  expect(html).toBe(
+    '<html><head><meta name="runespect-transport" content="page"><title>runespect</title></head></html>',
+  );
+});

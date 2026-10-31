@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,7 +8,13 @@ import {
   TO_PANEL_KINDS,
   isRunespectMessage,
 } from '@runespect/agent/protocol/internal';
-import { panelAssetPath, panelContentType, panelRedirect } from './panel-route.ts';
+import {
+  PANEL_ROUTE,
+  panelAssetPath,
+  panelContentType,
+  panelRedirect,
+  releasePanelHtml,
+} from './panel-route.ts';
 import { AGENT_RUNTIME, DEV_SERVER_FLAG, RELEASE_ROOT_FLAG, agentCall } from './instrument.ts';
 import { uiVersionProblem } from './ui-version.ts';
 import { instrumentModule } from './module-state.ts';
@@ -36,6 +42,18 @@ export interface RunespectOptions {
 // The dev servers in this process that runespect() serves. The flag runespectPreprocess() reads is
 // set while there is at least one, so it never reaches a build run later in the same process.
 const servers = new Set<Plugin>();
+// Built by this package's own `build` script (panel/vite.config.ts) so the host app's Svelte setup —
+// including runespect's own instrumentation — never compiles the devtools.
+const panelDir = (): string => fileURLToPath(new URL('../panel-dist', import.meta.url));
+
+function panelExists(logger?: Logger): boolean {
+  if (existsSync(path.join(panelDir(), 'index.html'))) return true;
+  logger?.warn(
+    `[runespect] the panel window is missing from ${panelDir()}; build @runespect/vite-plugin.`,
+  );
+  return false;
+}
+
 const AGENT_ENTRIES = new Set([AGENT_RUNTIME, '@runespect/agent/internal', '@runespect/agent']);
 
 /**
@@ -97,8 +115,27 @@ export function runespect(options: RunespectOptions = {}): Plugin {
       if (this.environment.name === 'client') {
         logger?.warn(
           '[runespect] includeInRelease is on. This build exposes component state and lets ' +
-            'anyone edit it. Do not deploy it to production.',
+            'anyone edit it, also at /__runespect/. Do not deploy it to production.',
         );
+      }
+    },
+    // The panel window as plain files next to the app: nothing loads them until someone opens the
+    // address, and they reach the page through the browser, with no server.
+    generateBundle() {
+      if (!releaseRoot || this.environment.name !== 'client') return;
+      if (!panelExists(logger)) return;
+      for (const file of readdirSync(panelDir(), { recursive: true, encoding: 'utf8' })) {
+        const from = path.join(panelDir(), file);
+        if (!statSync(from).isFile()) continue;
+        const name = file.split(path.sep).join('/');
+        this.emitFile({
+          type: 'asset',
+          fileName: `${PANEL_ROUTE.slice(1)}/${name}`,
+          source:
+            name === 'index.html'
+              ? releasePanelHtml(readFileSync(from, 'utf8'))
+              : readFileSync(from),
+        });
       }
     },
     closeBundle() {
@@ -135,7 +172,7 @@ export function runespect(options: RunespectOptions = {}): Plugin {
       const off = options.openInEditor === false || !!releaseRoot;
       return [
         `import * as __runespect from ${JSON.stringify(AGENT_RUNTIME)};`,
-        `${agentCall('start', `{ hot: import.meta.hot${off ? ', openInEditor: false' : ''} }`)};`,
+        `${agentCall('start', `{ ${releaseRoot ? 'inBuild: true' : 'hot: import.meta.hot'}${off ? ', openInEditor: false' : ''} }`)};`,
         ``,
       ].join('\n');
     },
@@ -153,9 +190,6 @@ export function runespect(options: RunespectOptions = {}): Plugin {
     // both hold a Vite HMR connection. Every runespect message is rebroadcast to the channel with
     // its sender tag intact, so each end can drop its own echo.
     configureServer(server: ViteDevServer) {
-      // Built by this package's own `build` script (panel/vite.config.ts) so the host app's Svelte
-      // setup — including runespect's own instrumentation — never compiles the devtools.
-      const panelDir = fileURLToPath(new URL('../panel-dist', import.meta.url));
       // Only a message of a kind the protocol has: anyone who can open the app can open the socket.
       const brokered = new Set<string>([...TO_PANEL_KINDS, ...TO_PAGE_KINDS]);
       server.ws.on(HOT_EVENT, (data: unknown) => {
@@ -165,11 +199,7 @@ export function runespect(options: RunespectOptions = {}): Plugin {
 
       // The panel window itself: prebuilt static files, served from the app's own dev server so it
       // shares the app's origin (and its TLS, which is what lets the HMR channel be wss).
-      if (!existsSync(path.join(panelDir, 'index.html'))) {
-        server.config.logger.warn(
-          `[runespect] the panel window is missing from ${panelDir}; build @runespect/vite-plugin.`,
-        );
-      }
+      panelExists(server.config.logger);
       server.middlewares.use((req, res, next) => {
         const redirect = req.url ? panelRedirect(req.url, server.config.base) : null;
         if (redirect) {
@@ -179,8 +209,8 @@ export function runespect(options: RunespectOptions = {}): Plugin {
         }
         const asset = req.url ? panelAssetPath(req.url, server.config.base) : null;
         if (!asset) return next();
-        const file = path.resolve(panelDir, asset);
-        if (!file.startsWith(panelDir + path.sep)) return next();
+        const file = path.resolve(panelDir(), asset);
+        if (!file.startsWith(panelDir() + path.sep)) return next();
         readFile(file)
           .then((body) => {
             res.setHeader('content-type', panelContentType(file));

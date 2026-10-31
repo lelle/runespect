@@ -52,6 +52,7 @@ export {
   broadcast,
   createWindowTransport,
   createHotTransport,
+  pageChannel,
   HOT_EVENT,
   setOpenInEditor,
   openInEditor,

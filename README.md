@@ -34,6 +34,9 @@ export default defineConfig({
 Start the dev server and open `/__runespect/` on it, next to your app. On SvelteKit, see
 [Use with SvelteKit](docs/how-to/use-with-sveltekit.md).
 
+For built apps (not running `vite dev`), `includeInRelease` builds runespect into the app. Never deploy
+that build to production. See [Choose where to run it](docs/how-to/choose-where-to-run-it.md).
+
 ## What you get
 
 - The component tree, with each component's props, state, derived values, stores and context, live

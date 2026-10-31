@@ -26,7 +26,7 @@ The only code that reads Svelte's internals is the experimental capture in `pack
 
 ```mermaid
 flowchart TB
-  subgraph build["build time (vite dev)"]
+  subgraph build["build time (vite dev, or vite build with includeInRelease)"]
     pre["runespectPreprocess()<br>adds reporting code<br>to each .svelte file"]
     plugin["runespect()<br>instruments .svelte.ts modules,<br>adds the broadcast module,<br>serves /__runespect/,<br>brokers the HMR channel"]
   end
@@ -38,7 +38,7 @@ flowchart TB
   plugin --> agent
   comp --> agent
   agent -- "window.postMessage" --> ext["extension DevTools tab"]
-  agent -- "Vite HMR channel" --> win["/__runespect/ window"]
+  agent -- "Vite HMR channel,<br>or BroadcastChannel in a build" --> win["/__runespect/ window"]
   agent -- "direct calls" --> overlay["#lt;Inspect#gt; overlay"]
 ```
 
@@ -94,7 +94,7 @@ The plugin only describes what the file has; the agent's runtime does the rest (
 - The edit is made with `magic-string` and returns a sourcemap, so errors and breakpoints still
   point at the original lines.
 
-### `runespect()`: the dev server
+### `runespect()`: the dev server, and a build that asks for it
 
 A Vite plugin (`src/index.ts`) that `vite build` does not run unless `includeInRelease` is on. It:
 
@@ -116,6 +116,14 @@ A Vite plugin (`src/index.ts`) that `vite build` does not run unless `includeInR
   the dev server is running, and removes it when the last dev server in the process closes, so a
   build run later in the same process is not instrumented. Vitest also starts Vite in serve mode,
   so under Vitest it is not set.
+
+With `includeInRelease`, `vite build` runs it too, and it differs in these ways:
+
+- `RUNESPECT_RELEASE_ROOT` takes the place of `RUNESPECT_DEV_SERVER` for as long as an environment
+  builds. It also holds the project root, because paths in a build are relative to it.
+- The broadcast module calls `start({ inBuild: true })`, and Open in editor is off.
+- There is no broker and no middleware. The panel window goes in the build as files, with a `meta` tag
+  that tells it to use `pageChannel()` in place of the dev server's channel.
 
 ## 2. The agent (`packages/agent`)
 
@@ -184,6 +192,8 @@ several at once; a flush is still diffed and recorded once.
   and `chrome.runtime` (`src/relay.ts`). The service worker routes by tab to that tab's DevTools
   panel (`src/routing.ts`), whose port reconnects when Chrome stops the idle worker
   (`src/panel-port.ts`).
+- **Page channel** (`pageChannel`): a `BroadcastChannel` in the shape of the hot channel, between the
+  page and the panel window of an `includeInRelease` build, which has no dev server.
 - **Direct**: the `<Inspect>` overlay calls the agent in the same page, without messages.
 
 ### Who can talk to the agent
@@ -221,6 +231,8 @@ flowchart TB
   app["app page"] <-- "import.meta.hot" --> vite["vite dev server<br>(runespect plugin brokers)"]
   vite <-- "ws" --> win["/__runespect/ window"]
 ```
+
+In a build the dev server is gone, and a `BroadcastChannel` joins the two tabs directly.
 
 Details worth knowing:
 

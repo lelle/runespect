@@ -11,6 +11,13 @@ devtools: http://localhost:5173/__runespect/
 There is no extension and no extra port: the app and the panel talk over Vite's HMR channel, so it
 also works over https.
 
+## In a build
+
+With [`includeInRelease`](../reference/options.md#includeinrelease), `vite build` puts the panel next
+to the app, at the same address. There is no dev server between them: the two reach each other through
+the browser, so open them in tabs of the same browser, on the same origin. Keep the slash at the end
+of the address. A panel on one machine cannot follow an app on another.
+
 ## Under a Vite `base`
 
 The panel moves with the app: `base: '/app/'` serves it at `/app/__runespect/`.
@@ -31,6 +38,9 @@ That beats the page the panel followed last, which is what it picks when you nam
 page answers, the panel shows no other page, so the other tabs stay as they are.
 
 ## Over the network
+
+The same goes for a build with `includeInRelease`: anyone who can open it can also open its panel and
+edit its state. Never deploy it to production.
 
 With `vite --host`, anyone who can open the app on your network can also open its panel and edit
 its state. The dev server already serves them your source; see

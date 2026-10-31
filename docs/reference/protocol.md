@@ -264,6 +264,9 @@ once; a flush is still diffed once and every transport sends the same commit.
 - **HMR** (`createHotTransport`): the `runespect:msg` event on Vite's HMR socket, between the page and
   the panel window at `/__runespect/`. The plugin's broker forwards only messages whose `kind` is in
   one of the two direction lists, and sends each to every client, its sender included.
+- **Page channel** (`pageChannel`): the same event over a `BroadcastChannel`, between the page and the
+  panel window of an `includeInRelease` build. The browser delivers each message to every other
+  document of the origin; there is no broker.
 - **Extension**, in four hops (the chain is drawn in [Event log](event-log.md#the-chain)):
   - the content-script relay (`extension/src/relay.ts`) passes page-to-panel kinds from the window to
     `chrome.runtime`, and panel-to-page kinds back;
