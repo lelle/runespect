@@ -172,8 +172,9 @@
   // names-only DOM walk. We wait GRACE_MS before saying so, since a slow plugin page can lose the race
   // to the names-only walk's first broadcast and would otherwise flash a warning it doesn't deserve.
   const GRACE_MS = 2000;
-  // The page turns it off with runespect({ openInEditor: false }) and says so in its hello.
-  let openInEditor = $derived(following.page.openInEditor);
+  // The page turns it off with runespect({ openInEditor: false }) and says so in its hello. Without
+  // a hello this is Names only, whose paths are relative to a project root the panel cannot know.
+  let openInEditor = $derived(following.page.openInEditor && following.page.tier !== null);
   let graceElapsed = $state(false);
   $effect(() => {
     const id = setTimeout(() => (graceElapsed = true), GRACE_MS);
