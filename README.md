@@ -7,12 +7,12 @@
 [![CI](https://github.com/lelle/runespect/actions/workflows/ci.yml/badge.svg)](https://github.com/lelle/runespect/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-> **Devtools for Svelte 5: see and edit the live runes state of every component.**
+> **Svelte 5 DevTools: see and edit the live `$state`, `$derived` and `$props` of every component.**
 
 **[▶ Try it live](https://lelle.github.io/runespect/demo/)** — a small shop and the panel, no
 install
 
-![the runespect panel: the component tree on the left, the selected component's props, state and derived values on the right](docs/images/panel.png)
+![runespect next to a small shop: a value edited in the panel changes the shop](docs/images/edit.gif)
 
 ## Quick start
 

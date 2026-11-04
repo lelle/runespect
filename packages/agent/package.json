@@ -3,12 +3,17 @@
   "version": "0.2.0",
   "license": "MIT",
   "type": "module",
-  "description": "In-page agent for runespect: holds the component tree and live runes state the injected instrumentation reports",
+  "description": "Svelte 5 DevTools: runespect's in-page agent, which holds the component tree and live runes state. Installed with @runespect/vite-plugin.",
   "keywords": [
     "svelte",
     "svelte5",
     "devtools",
-    "runes"
+    "svelte-devtools",
+    "runes",
+    "inspector",
+    "state",
+    "debugger",
+    "vite"
   ],
   "repository": {
     "type": "git",

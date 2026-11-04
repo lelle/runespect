@@ -3,12 +3,17 @@
   "version": "0.2.0",
   "license": "MIT",
   "type": "module",
-  "description": "runespect's devtools UI for Svelte 5: the panel and the in-page <Inspect> overlay",
+  "description": "Svelte 5 DevTools: runespect's panel and in-page overlay for the component tree and live runes state.",
   "keywords": [
     "svelte",
     "svelte5",
     "devtools",
-    "runes"
+    "svelte-devtools",
+    "runes",
+    "inspector",
+    "state",
+    "debugger",
+    "vite"
   ],
   "repository": {
     "type": "git",

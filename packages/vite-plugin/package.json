@@ -3,12 +3,17 @@
   "version": "0.2.0",
   "license": "MIT",
   "type": "module",
-  "description": "Vite plugin and Svelte preprocessor that instrument Svelte 5 components for runespect and serve its panel",
+  "description": "Svelte 5 DevTools as a Vite plugin: the component tree and live runes state, with editing.",
   "keywords": [
     "svelte",
     "svelte5",
     "devtools",
-    "runes"
+    "svelte-devtools",
+    "runes",
+    "inspector",
+    "state",
+    "debugger",
+    "vite"
   ],
   "repository": {
     "type": "git",

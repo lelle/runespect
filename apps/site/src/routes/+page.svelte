@@ -5,11 +5,11 @@
 
   const root = resolve('/');
   const description =
-    'Devtools for Svelte 5: the component tree and live runes state, with editing, next to your app.';
+    'Svelte 5 DevTools: see and edit the live $state, $derived and $props of every component.';
 </script>
 
 <svelte:head>
-  <title>runespect — devtools for Svelte 5</title>
+  <title>runespect — Svelte 5 DevTools</title>
   <meta name="description" content={description} />
   <meta property="og:title" content="runespect" />
   <meta property="og:description" content={description} />
@@ -18,8 +18,7 @@
 <main id="content" class="home">
   <h1><img src={glass} alt="" width="64" height="64" />runespect</h1>
   <p class="lede">
-    Devtools for <strong>Svelte 5</strong>: the component tree and live runes state (<code
-      >$state</code
+    <strong>Svelte 5 DevTools</strong>: the component tree and live runes state (<code>$state</code
     >, <code>$derived</code>, <code>$props</code>), with editing — in a window next to your app, in
     an overlay inside it, or in a Chrome DevTools panel.
   </p>
