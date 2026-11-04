@@ -3,6 +3,12 @@
 What to enter in the Chrome Web Store developer dashboard for this extension. Change it together with
 what it describes.
 
+## Publisher
+
+- **Publisher:** runespect, shown as "Offered by" on the listing
+- **Contact email:** runespect@googlegroups.com, verified on the publisher's settings page. Anyone can
+  write to the group; only its members read what arrives.
+
 ## Store listing
 
 - **Name:** runespect: Svelte 5 DevTools (from `packages/extension/manifest.json`)

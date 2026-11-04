@@ -44,4 +44,5 @@ On a page without a Svelte development build they find nothing and stay quiet.
 
 ## Contact
 
-Questions and reports: open an issue at <https://github.com/lelle/runespect/issues>.
+Questions and reports: open an issue at <https://github.com/lelle/runespect/issues>, or write to
+<runespect@googlegroups.com> for anything you would rather not post in public.
