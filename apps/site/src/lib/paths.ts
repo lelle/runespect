@@ -2,6 +2,9 @@
 
 export const REPO = 'https://github.com/lelle/runespect';
 
+/** Where GitHub Pages publishes the site. */
+export const SITE_URL = 'https://lelle.github.io/runespect/';
+
 /**
  * A link from one site path to another, both relative to the site's root and ending in `/`. The
  * menu works it out in the browser too, where there is no node:path.

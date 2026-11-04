@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { TIER_DOCS_URL, TROUBLESHOOTING_URL } from '../packages/ui/src/status';
 import { RUNE_FAVICON, faviconOf } from './favicon';
+import { SITE_URL as PUBLISHED } from '../apps/site/src/lib/paths';
 
 // The project site as GitHub Pages serves it: built to site/ and served under /runespect/. The
 // site is prerendered, so every page and every link between them can be checked before it is
@@ -8,7 +9,6 @@ import { RUNE_FAVICON, faviconOf } from './favicon';
 
 const ORIGIN = 'http://localhost:5183';
 const SITE = `${ORIGIN}/runespect/`;
-const PUBLISHED = 'https://lelle.github.io/runespect/';
 
 const internalLinks = (page: Page) =>
   page.$$eval('a[href]', (links) => links.map((a) => (a as HTMLAnchorElement).href));
@@ -48,6 +48,40 @@ test('a directory without its slash is sent to it, as GitHub Pages does', async 
   expect(response.headers()['location']).toBe('/runespect/docs/how-to/troubleshoot/');
   expect((await request.get(`${SITE}%E0%A4%A`)).status()).toBe(400);
   expect((await request.get(SITE)).status()).toBe(200);
+});
+
+// Search engines find pages through the sitemap before anything links to them.
+test('the sitemap lists the front page, the demo and every docs page, and each exists', async ({
+  page,
+  request,
+}) => {
+  const xml = await (await request.get(`${SITE}sitemap.xml`)).text();
+  const listed = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]);
+  expect(listed.every((url) => url.startsWith(PUBLISHED))).toBe(true);
+
+  await page.goto(`${SITE}docs/`);
+  const menu = await page.$$eval('.docs-menu a[href]', (links) =>
+    links.map((a) => (a as HTMLAnchorElement).href.replace(/#.*$/, '')),
+  );
+  const local = listed.map((url) => url.replace(PUBLISHED, SITE));
+  expect(local).toEqual(expect.arrayContaining([SITE, `${SITE}demo/`, ...menu]));
+  for (const url of local) expect((await request.get(url)).status(), url).toBe(200);
+});
+
+// A link shared in a chat or a post shows this picture; the address has to be absolute.
+test('every page has a link preview picture that exists', async ({ page, request }) => {
+  for (const url of [SITE, `${SITE}docs/how-to/troubleshoot/`]) {
+    await page.goto(url);
+    const image = await page.getAttribute('meta[property="og:image"]', 'content');
+    expect(image?.startsWith(PUBLISHED), url).toBe(true);
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+      'content',
+      'summary_large_image',
+    );
+    const response = await request.get(image!.replace(PUBLISHED, SITE));
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).toBe('image/png');
+  }
 });
 
 test('a missing page answers 404 with a way back', async ({ page }) => {

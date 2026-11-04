@@ -2,7 +2,8 @@
   import { page } from '$app/state';
   import { resolve } from '$app/paths';
   import ThemeSwitch from '#lib/ThemeSwitch.svelte';
-  import { REPO } from '#lib/paths.ts';
+  import { REPO, SITE_URL } from '#lib/paths.ts';
+  import preview from '#lib/og.png';
   import '#lib/site.css';
   import favicon from '../../../../packages/extension/public/icons/icon-32.png';
   import rune from '../../../../packages/extension/icons/icon-small.png';
@@ -12,10 +13,19 @@
   const root = resolve('/');
   const counterPrivacy = 'https://www.goatcounter.com/help/privacy';
   const section = $derived(page.url.pathname.slice(root.length).split('/')[0]);
+  // Shown where a link to the site is shared; the address has to be absolute.
+  const previewUrl = new URL(preview, SITE_URL).href;
 </script>
 
 <svelte:head>
   <link rel="icon" type="image/png" href={favicon} />
+  <meta property="og:site_name" content="runespect" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content={previewUrl} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="runespect: Svelte 5 DevTools, next to the panel" />
+  <meta name="twitter:card" content="summary_large_image" />
   <!-- Counts visits without cookies; the numbers are private to the maintainer. -->
   <script
     async
