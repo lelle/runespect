@@ -21,6 +21,7 @@ import { absorbForeign, record, sizeOf } from './observe';
 import { highlight, logNode, startPick, stopPick, storeGlobal } from './page-actions';
 import { activate, inspectPath, serialize, watchFlushes, WIRE_DEPTH } from './wire.svelte';
 import { setValue } from './tree.svelte';
+import { version } from '../package.json';
 
 /** A per-instance id: random + time, so two never collide in any realm. */
 const newInstanceId = (): string => `${Math.random().toString(36).slice(2)}-${Date.now()}`;
@@ -107,13 +108,39 @@ export function connect(transport: Transport): () => void {
   // highlighting and the picker. Announced on connect rather than only when asked — a panel that
   // was already open sent its one `request` before this page existed, and would otherwise show a
   // live plugin app as Names only forever.
-  const announce = (): void =>
+  let announced = '';
+  const announce = (): void => {
+    const page = identity();
+    announced = `${page.url}\n${page.title}`;
     send(
       helloMessage(PROTOCOL_VERSION, 0, {
-        ...identity(),
+        ...page,
+        agentVersion: version,
         ...(editorLinks.on ? {} : { openInEditor: false as const }),
       }),
     );
+  };
+
+  // An app that navigates on the client stays the same page under a new url, and its title often
+  // follows a moment later; it says hello again so the panel lists it as it is now. Only once a
+  // panel has asked: until then the page sends nothing. The Navigation API tells of every history
+  // change without wrapping the app's own history.pushState.
+  let stopWatchingPage: (() => void) | null = null;
+  const watchPage = (): void => {
+    if (stopWatchingPage || typeof document === 'undefined') return;
+    const check = (): void => {
+      const page = identity();
+      if (`${page.url}\n${page.title}` !== announced) announce();
+    };
+    const navigation = (globalThis as { navigation?: EventTarget }).navigation;
+    navigation?.addEventListener('currententrychange', check);
+    const titles = new MutationObserver(check);
+    titles.observe(document.head, { subtree: true, childList: true, characterData: true });
+    stopWatchingPage = () => {
+      navigation?.removeEventListener('currententrychange', check);
+      titles.disconnect();
+    };
+  };
 
   // Nothing is sent as the app changes until a panel asks: then this transport follows every flush.
   let stop: (() => void) | null = null;
@@ -145,6 +172,7 @@ export function connect(transport: Transport): () => void {
         sendSnapshot();
       }
       announce();
+      watchPage();
     } else if (msg.kind === 'highlight') highlight(msg.id);
     else if (msg.kind === 'pick') {
       if (msg.active) startPick((id) => send(pickedMessage(id)));
@@ -163,6 +191,7 @@ export function connect(transport: Transport): () => void {
   const disconnect = (): void => {
     if (!connections.delete(disconnect)) return;
     stop?.();
+    stopWatchingPage?.();
     if (off) off();
     stopPick();
     highlight(null);

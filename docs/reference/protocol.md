@@ -103,8 +103,9 @@ Escape answers `picked` with `id: null`. `pick` with `active: false` ends a pick
 
 ### `hello`
 
-Page to panel. Who the page is and which version it speaks. Sent when the agent connects and as
-the answer to every `request`.
+Page to panel. Who the page is and which version it speaks. Sent when the agent connects, as the
+answer to every `request`, and, once a panel has asked, again whenever the page's url or title
+changes (an app that navigates on the client, followed through the Navigation API).
 
 | Field          | Type      | Meaning                                                                     |
 | -------------- | --------- | --------------------------------------------------------------------------- |
@@ -114,6 +115,7 @@ the answer to every `request`.
 | `url`          | `string?` | path and query, with secret-looking query values replaced by `…`            |
 | `title`        | `string?` | the page's `document.title`                                                 |
 | `openInEditor` | `false?`  | present when the app turned Open in editor off                              |
+| `agentVersion` | `string?` | the agent's package version, such as `0.2.0`                                |
 
 ### `request`
 

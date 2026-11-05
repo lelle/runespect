@@ -85,9 +85,18 @@ export function follow(state: Following, event: FollowEvent, now: number): Follo
 
   const msg = event.msg;
   // A hello from anyone is how the panel learns a page exists, so it is tracked before the filter.
+  // The followed page saying hello under a new url has navigated on the client: that url is now the
+  // one to come back to, so the panel goes with it.
   const heard =
     msg.kind === 'hello'
-      ? refollow(state, { ...state, sources: trackSources(state.sources, msg, now) })
+      ? refollow(state, {
+          ...state,
+          sources: trackSources(state.sources, msg, now),
+          rememberedUrl:
+            msg.from === state.followedId && msg.url && state.rememberedUrl
+              ? msg.url
+              : state.rememberedUrl,
+        })
       : { state, deliver: null, send: [], switched: false };
   if (!belongsToFollowed(msg, heard.state)) return heard;
   if (msg.kind !== 'hello') return { ...heard, deliver: msg };

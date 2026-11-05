@@ -18,6 +18,14 @@ What each part of the runespect panel does. The panel is the same in the window 
   selects the component under the element you click in the page.
 - Alt+↑ and Alt+↓ move between siblings.
 
+## Which page
+
+- The chip beside the tier names the page the panel follows by its url. When the dev server serves
+  several pages (two tabs, another route), it says how many: `/checkout · 3 pages ▾`.
+- ▾ lists them, two lines each: url and when it last spoke; then title, tier and agent version. Click
+  one to follow it.
+- A page that navigates on the client is listed under its new url and title.
+
 ## Search and filters
 
 - **Filter** matches component names, as text or as a `/regex/`. `/` focuses it, Esc clears it.

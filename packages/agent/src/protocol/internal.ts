@@ -182,6 +182,8 @@ export interface HelloMessage extends FromSource {
   title?: string;
   /** The app turned Open in editor off: its editor does not open the panel's links. */
   openInEditor?: false;
+  /** The agent's package version, so a tab still running an older one can be told apart. */
+  agentVersion?: string;
 }
 
 /** How a page describes itself in the handshake. Its id is `from`, on everything it sends. */
@@ -361,7 +363,7 @@ export function hydrateMessage(
 export function helloMessage(
   version: number,
   tier?: 0 | 2,
-  identity?: SourceIdentity & Pick<HelloMessage, 'openInEditor'>,
+  identity?: SourceIdentity & Pick<HelloMessage, 'openInEditor' | 'agentVersion'>,
 ): HelloMessage {
   return { source: SOURCE, kind: 'hello', version, ...(tier != null && { tier }), ...identity };
 }
