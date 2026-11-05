@@ -11,6 +11,8 @@ export interface Source {
   id: string;
   url?: string;
   title?: string;
+  tier?: 0 | 2;
+  agentVersion?: string;
   /** When we last heard from it. A quiet page and a closed one look identical on a shared bus, so
    *  this is reported as an age rather than used to declare anything dead. */
   lastSeen: number;
@@ -24,7 +26,14 @@ export function trackSources(
 ): readonly Source[] {
   // `from` is the page's id — it is on every message it sends, so a hello needs no id of its own.
   if (!hello.from) return sources;
-  const next: Source = { id: hello.from, url: hello.url, title: hello.title, lastSeen: now };
+  const next: Source = {
+    id: hello.from,
+    url: hello.url,
+    title: hello.title,
+    tier: hello.tier,
+    agentVersion: hello.agentVersion,
+    lastSeen: now,
+  };
   return sources.some((s) => s.id === next.id)
     ? sources.map((s) => (s.id === next.id ? next : s))
     : [...sources, next];
@@ -75,4 +84,12 @@ export function lastSeenLabel(source: Source, now: number): string {
 /** What to show for a source: its path, falling back to the title, then the id. */
 export function sourceLabel(source: Source): string {
   return source.url || source.title || source.id;
+}
+
+/** The second line of a page in the list: its title, its tier and its agent version, if it said them. */
+export function sourceDetails(source: Source): string {
+  const tier = source.tier === 0 ? 'Live' : source.tier === 2 ? 'Capture' : 'Names only';
+  return [source.title, tier, source.agentVersion && `v${source.agentVersion}`]
+    .filter(Boolean)
+    .join(' · ');
 }

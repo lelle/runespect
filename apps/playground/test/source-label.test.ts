@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { lastSeenLabel, sourceLabel } from '@runespect/ui/internal';
+import { lastSeenLabel, sourceDetails, sourceLabel } from '@runespect/ui/internal';
 
 // How the panel names the pages it can follow, and how long ago each spoke.
 
@@ -16,4 +16,13 @@ test('how long ago a page spoke: just now, then seconds, then minutes', () => {
   expect(at(59_000)).toBe('59s ago');
   expect(at(240_000)).toBe('4m ago');
   expect(at(-5_000)).toBe('just now'); // a clock that went back
+});
+
+// The second line of a row in the page list: what else tells two pages apart.
+test("a page's details: its title, its tier and its agent version, as far as it said them", () => {
+  expect(
+    sourceDetails({ id: 'a', title: 'Shop', tier: 0, agentVersion: '0.2.0', lastSeen: 0 }),
+  ).toBe('Shop · Live · v0.2.0');
+  expect(sourceDetails({ id: 'a', title: 'Shop', tier: 2, lastSeen: 0 })).toBe('Shop · Capture');
+  expect(sourceDetails({ id: 'a', lastSeen: 0 })).toBe('Names only');
 });

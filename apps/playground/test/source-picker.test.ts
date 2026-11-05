@@ -8,8 +8,8 @@ beforeEach(() => localStorage.clear());
 
 // A page announces what it is called in the handshake; who it is comes from `from`, which every
 // message it sends carries.
-const hello = (id: string, url: string, title = url): Message => ({
-  ...helloMessage(PROTOCOL_VERSION, 0, { url, title }),
+const hello = (id: string, url: string, title = url, agentVersion?: string): Message => ({
+  ...helloMessage(PROTOCOL_VERSION, 0, { url, title, ...(agentVersion && { agentVersion }) }),
   from: id,
 });
 
@@ -54,6 +54,53 @@ test('two sources: the panel offers a choice and keeps following the first', () 
   flushSync();
   expect(picker(target)).toBeTruthy();
   expect(picker(target)!.textContent).toContain('/admin');
+});
+
+// Two tabs on one route look the same by url, so the chip says how many pages there are, and the
+// list tells them apart.
+test('several sources: the chip counts the pages, and each row of the list says what it is', () => {
+  const { target, emit } = panelWith();
+  emit(hello('a', '/checkout', 'Shop', '0.2.0'));
+  emit(hello('b', '/checkout', 'Shop', '0.2.0'));
+  emit(hello('c', '/', 'Shop', '0.1.1'));
+
+  expect(source(target).textContent!.trim()).toBe('/checkout · 3 pages ▾');
+  source(target).click();
+  flushSync();
+  const rows = [...picker(target)!.querySelectorAll('button')].map((row) => ({
+    url: row.querySelector('.label')!.textContent,
+    details: row.querySelector('.details')!.textContent,
+    current: row.classList.contains('current'),
+  }));
+  // Of two pages on one url the panel follows the one it heard from last, as it does today.
+  expect(rows).toEqual([
+    { url: '/checkout', details: 'Shop · Live · v0.2.0', current: false },
+    { url: '/checkout', details: 'Shop · Live · v0.2.0', current: true },
+    { url: '/', details: 'Shop · Live · v0.1.1', current: false },
+  ]);
+});
+
+// A page that navigates on the client says hello again; the panel takes its new url.
+test('a page that says hello again under a new url is listed under the new one', () => {
+  const { target, emit } = panelWith();
+  emit(hello('a', '/', 'Shop'));
+  emit(hello('a', '/checkout', 'Checkout'));
+
+  expect(source(target).textContent).toContain('/checkout');
+  expect(source(target).textContent).not.toContain('pages');
+});
+
+// A panel opened for one url follows that page; when the page navigates away from it on the client,
+// the panel goes with it instead of waiting for the old url to come back.
+test('a panel opened for a url keeps following its page when the page navigates', () => {
+  const { target, emit } = panelWith('/cart');
+  emit(hello('a', '/cart', 'Cart'));
+  emit({ ...treeMessage([node('CartPage')]), from: 'a' } as Message);
+  emit(hello('a', '/checkout', 'Checkout'));
+  flushSync();
+
+  expect(source(target).textContent).toContain('/checkout');
+  expect(target.querySelector('[data-select="CartPage"]')).toBeTruthy();
 });
 
 test('switching source switches the tree', () => {

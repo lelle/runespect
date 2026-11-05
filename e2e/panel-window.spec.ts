@@ -168,6 +168,25 @@ test('an edit reaches only the page the panel follows', async ({ context }) => {
   await expect(other.locator('#app button', { hasText: '77 / 154' })).toHaveCount(0);
 });
 
+// An app that navigates on the client stays the same page; the panel follows it to its new url, and
+// keeps showing its tree.
+test('a page that navigates on the client is followed to its new url', async ({ context }) => {
+  const app = await context.newPage();
+  await app.goto('/?case=navigates');
+  const panel = await context.newPage();
+  await panel.goto('/__runespect/?source=/?case=navigates');
+  const source = panel.locator('[data-testid="runespect-source"]');
+  await expect(source).toContainText('/?case=navigates');
+
+  await app.evaluate(() => {
+    history.pushState(null, '', '/?case=navigates-moved');
+    document.title = 'Moved';
+  });
+
+  await expect(source).toContainText('/?case=navigates-moved');
+  await expect(panel.locator('[data-select="Counter"]').first()).toBeVisible();
+});
+
 // A DevTools-sized panel and a long route: the toolbar fits the window, so the panel does not scroll
 // sideways and `pick` stays on one line.
 test('a long page url does not push the panel wider than its window', async ({ context }) => {

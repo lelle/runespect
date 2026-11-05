@@ -34,7 +34,7 @@
   import History from './History.svelte';
   import CommitDetail from './CommitDetail.svelte';
   import { panelStatus } from './status';
-  import { lastSeenLabel, sourceLabel } from './sources';
+  import { lastSeenLabel, sourceDetails, sourceLabel } from './sources';
   import { startFollowing, follow, type FollowStep } from './follow';
   import { EMPTY, hold, shown, type Held } from './held';
   import Tree from './Tree.svelte';
@@ -366,7 +366,8 @@
               data-testid="runespect-source"
               aria-expanded={sourcesOpen}
               title="Choose which page to follow"
-              onclick={() => (sourcesOpen = !sourcesOpen)}>{sourceLabel(followed)} ▾</button
+              onclick={() => (sourcesOpen = !sourcesOpen)}
+              >{sourceLabel(followed)} · {sources.length} pages ▾</button
             >
           {:else}
             <span class="source" data-testid="runespect-source">{sourceLabel(followed)}</span>
@@ -391,6 +392,8 @@
                 <span class="label">{sourceLabel(source)}</span>
                 <!-- An age, not a verdict: a quiet page and a closed one look the same here. -->
                 <span class="seen">{lastSeenLabel(source, now)}</span>
+                <!-- Two tabs on one route share a url: the details tell them apart. -->
+                <span class="details">{sourceDetails(source)}</span>
               </button>
             </li>
           {/each}
@@ -572,8 +575,9 @@
     z-index: 10;
   }
   .sources button {
-    display: flex;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    column-gap: 8px;
     width: 100%;
     background: transparent;
     border: none;
@@ -589,7 +593,11 @@
   }
   .sources .seen {
     color: var(--rs-muted);
-    margin-left: auto;
+    text-align: right;
+  }
+  .sources .details {
+    grid-column: 2 / -1;
+    color: var(--rs-muted);
   }
   .source {
     background: transparent;

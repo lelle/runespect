@@ -48,7 +48,7 @@ export {
   changeKey,
   formatCommitTime,
 } from './history';
-export { lastSeenLabel, sourceLabel } from './sources';
+export { lastSeenLabel, sourceDetails, sourceLabel } from './sources';
 export type { Source } from './sources';
 export { startFollowing, follow } from './follow';
 export type { Following, FollowEvent, FollowStep, PageFacts } from './follow';
