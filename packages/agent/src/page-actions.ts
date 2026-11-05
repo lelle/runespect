@@ -1,4 +1,4 @@
-import { boundsOf, elementsForNode, nodeIdForElement } from './dom';
+import { boundsOf, highlightName, highlightTargets, nodeIdForElement } from './dom';
 import { allInOrder, find, onServer, read, readLive } from './tree.svelte';
 import { snap } from './snap.svelte';
 
@@ -11,16 +11,20 @@ let highlightLabel: HTMLElement | null = null;
 // What the box is currently drawn over, and the listeners keeping it there. The box is
 // position:fixed with viewport coordinates, so every scroll — of the window or of any container
 // between the element and the root — moves the element out from under it.
-let highlightTargets: Element[] = [];
+let boxedElements: Element[] = [];
+// What the box says and how it is drawn, kept so a box made again on a later scroll says it too.
+let boxedLabel = '';
+let boxedOutline = 'solid';
 let stopTracking: (() => void) | null = null;
 
-function trackBox(elements: Element[], name: string): void {
-  highlightTargets = elements;
+function trackBox(elements: Element[], name: string, viaChildren: boolean): void {
+  boxedElements = elements;
+  boxedLabel = highlightName(name, viaChildren);
+  boxedOutline = viaChildren ? 'dashed' : 'solid';
   showBox(boundsOf(elements)!);
-  highlightLabel!.textContent = name;
   if (stopTracking) return; // already listening; the target just changed
   const reposition = (): void => {
-    const bounds = boundsOf(highlightTargets);
+    const bounds = boundsOf(boxedElements);
     if (bounds) showBox(bounds);
   };
   // Capture, because a scroll inside a container does not bubble to the window.
@@ -58,9 +62,11 @@ function showBox(rect: DOMRect): void {
     });
     document.body.appendChild(highlightBox);
   }
+  highlightLabel!.textContent = boxedLabel;
   highlightLabel!.style.top = rect.top < 16 ? '0' : '-16px';
   Object.assign(highlightBox.style, {
     display: 'block',
+    outlineStyle: boxedOutline,
     top: `${rect.top}px`,
     left: `${rect.left}px`,
     width: `${rect.width}px`,
@@ -69,7 +75,7 @@ function showBox(rect: DOMRect): void {
 }
 function hideBox(): void {
   if (highlightBox) highlightBox.style.display = 'none';
-  highlightTargets = [];
+  boxedElements = [];
   stopTracking?.();
 }
 
@@ -82,8 +88,8 @@ export function highlight(id: number | null): void {
 
 // The box over every element of `node`'s instance, named; off when it has none in the page.
 function boxNode(node: ReturnType<typeof find>): void {
-  const elements = node ? elementsForNode(node, allInOrder()) : [];
-  if (node && elements.length) trackBox(elements, node.name);
+  const { elements, viaChildren } = highlightTargets(node, allInOrder());
+  if (node && elements.length) trackBox(elements, node.name, viaChildren);
   else hideBox();
 }
 

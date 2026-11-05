@@ -56,6 +56,7 @@
   let hoverEls: Element[] = [];
   let hoverRect = $state<DOMRect | null>(null);
   let hoverName = $state('');
+  let hoverViaChildren = $state(false);
   $effect(() => {
     if (!hoverRect) return;
     const reposition = (): void => {
@@ -69,16 +70,18 @@
       window.removeEventListener('resize', reposition);
     };
   });
-  function highlightEls(elements: Element[], name = ''): void {
+  function highlightEls(elements: Element[], name = '', viaChildren = false): void {
     hoverEls = elements;
     hoverRect = agent.boundsOf(elements);
-    hoverName = name;
+    hoverName = agent.highlightName(name, viaChildren);
+    hoverViaChildren = viaChildren;
   }
 
   // Every element of a node's instance, named; nothing when it has none in the page.
   function highlightInstance(id: number | null): void {
     const node = id == null ? undefined : nodes.find((n) => n.id === id);
-    highlightEls(node ? agent.elementsForNode(node, nodes) : [], node?.name);
+    const { elements, viaChildren } = agent.highlightTargets(node, nodes);
+    highlightEls(elements, node?.name, viaChildren);
   }
   let overlayEl: HTMLElement | undefined = $state();
 
@@ -232,6 +235,7 @@
 {#if hoverRect}
   <div
     class="rs-pick-highlight"
+    class:via-children={hoverViaChildren}
     data-testid="runespect-highlight"
     style="top:{hoverRect.top}px;left:{hoverRect.left}px;width:{hoverRect.width}px;height:{hoverRect.height}px;"
   >
@@ -313,6 +317,10 @@
     background: rgba(194, 65, 12, 0.2);
     outline: 2px solid #c2410c;
     z-index: 2147483646;
+  }
+  /* A component with no element of its own, boxed around what its children render. */
+  .rs-pick-highlight.via-children {
+    outline-style: dashed;
   }
   /* The component's name, on the box's top edge, or just inside it at the top of the viewport. */
   .rs-pick-label {

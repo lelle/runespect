@@ -1,3 +1,5 @@
+import { indexById } from './protocol/internal';
+
 // Page-side DOM helpers shared by the in-app overlay and the panel→page bridge. Svelte's dev
 // build tags each component's elements with __svelte_meta.loc; we map between DOM elements and
 // nodes by file. __svelte_meta has the path relative to the project and the preprocessor the
@@ -18,6 +20,7 @@ interface SvelteMeta {
 interface LocNode {
   id: number;
   loc?: string;
+  children?: ReadonlyArray<number>;
 }
 
 // A component outside the Vite root is tagged `../shared/Card.svelte`; the part below the parent
@@ -157,11 +160,13 @@ export function nodeIdForElement(
 }
 
 // Reverse: a node → the DOM element of its instance (instance-aware). Returns the instance root
-// element so callers can take its bounding rect to draw a highlight.
+// element so callers can take its bounding rect to draw a highlight. When the instance's place is
+// not found it falls back to the file's first instance, unless `exact`.
 export function elementForNode(
   node: LocNode | null | undefined,
   nodes: ReadonlyArray<LocNode>,
   root: ParentNode = document,
+  { exact = false }: { exact?: boolean } = {},
 ): Element | null {
   if (node && reporting()) return reportedElementsOf(node, root)[0] ?? null;
   if (!node?.loc) return null;
@@ -169,7 +174,7 @@ export function elementForNode(
   if (!file) return null;
   const roots = instanceRoots(file, root);
   const idx = nodesOfFile(file, nodes).indexOf(node);
-  return (idx >= 0 ? roots[idx] : undefined) ?? roots[0] ?? null;
+  return (idx >= 0 ? roots[idx] : undefined) ?? (exact ? null : (roots[0] ?? null));
 }
 
 /** Every element a node's instance renders at its top level, in DOM order. */
@@ -177,10 +182,39 @@ export function elementsForNode(
   node: LocNode | null | undefined,
   nodes: ReadonlyArray<LocNode>,
   root: ParentNode = document,
+  options: { exact?: boolean } = {},
 ): Element[] {
   if (node && reporting()) return reportedElementsOf(node, root);
-  const el = elementForNode(node, nodes, root);
+  const el = elementForNode(node, nodes, root, options);
   return el ? [el] : [];
+}
+
+/**
+ * What a highlight boxes for a node: its own elements, or, for a component that renders only other
+ * components, the elements of its nearest descendants that have some (`viaChildren`).
+ */
+export function highlightTargets(
+  node: LocNode | null | undefined,
+  nodes: ReadonlyArray<LocNode>,
+  root: ParentNode = document,
+): { elements: Element[]; viaChildren: boolean } {
+  const own = elementsForNode(node, nodes, root);
+  if (!node || own.length) return { elements: own, viaChildren: false };
+  const byId = indexById(nodes);
+  const descend = (n: LocNode): Element[] =>
+    (n.children ?? []).flatMap((id) => {
+      const child = byId.get(id);
+      if (!child) return [];
+      // Exact: a box around another instance's child would point at the wrong place.
+      const elements = elementsForNode(child, nodes, root, { exact: true });
+      return elements.length ? elements : descend(child);
+    });
+  return { elements: descend(node), viaChildren: true };
+}
+
+/** The name on a highlight: a box drawn around a component's children says so. */
+export function highlightName(name: string, viaChildren: boolean): string {
+  return viaChildren ? `${name} (via children)` : name;
 }
 
 /** The smallest rectangle around `elements`, in viewport coordinates; null for none. */

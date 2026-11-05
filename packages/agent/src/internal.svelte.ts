@@ -20,7 +20,8 @@ export {
   componentElement,
   nodeIdForElement,
   elementForNode,
-  elementsForNode,
+  highlightTargets,
+  highlightName,
   boundsOf,
 } from './dom';
 export { snap } from './snap.svelte';
