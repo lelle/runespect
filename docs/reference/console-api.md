@@ -23,6 +23,23 @@ __runespect.history(); // what changed, flush by flush
 | `set(id, symbol, value, path?)`  | sets a writable value, or a field inside one at `path`; `true` when applied                        |
 | `events`, `since(seq)`, `dump()` | the event log of every hop: [Event log](event-log.md)                                              |
 
+When `set()` does nothing it returns `false`, warns in the console with the reason, and records it in
+the event log as `{ ev: 'refused', id, error }`. An edit from the panel that changes nothing is
+recorded the same way, without the warning:
+
+```
+[runespect] set(17, 'query') did nothing: component 17 has unmounted
+```
+
+| `error`             | when                                                                                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `unmounted`         | the component has unmounted since you read its id                                                                                        |
+| `unknown-component` | the page never had a component with that id                                                                                              |
+| `unknown-symbol`    | the component has no value by that name                                                                                                  |
+| `not-writable`      | the value is not `$state` or a `$bindable` prop, such as a `$derived`                                                                    |
+| `bad-path`          | `path` runs past the value, through something other than a plain object or array, or to an array index other than one it has or the next |
+| `carries-marker`    | the value holds a placeholder the panel shows for something not loaded                                                                   |
+
 The console counts as a panel: `values()`, `inspect()`, `history()` and `set()` start the agent
 reading the app's values, so the history starts at the first of those calls when no panel is open.
 

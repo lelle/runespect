@@ -1,5 +1,12 @@
 import { compileMatcher, type Commit, type RunespectEvent } from './protocol/internal';
-import { allInOrder, find, onServer, setValue, type InspectNode } from './tree.svelte';
+import {
+  allInOrder,
+  find,
+  onServer,
+  trySetValue,
+  type InspectNode,
+  type SetRefusal,
+} from './tree.svelte';
 import { commitsSince } from './history';
 import { activate, inspectPath, serializeNode, WIRE_DEPTH } from './wire.svelte';
 import { absorbForeign, eventsSince, timeline } from './observe';
@@ -45,6 +52,28 @@ export interface RunespectSurface {
   absorb(incoming: RunespectEvent[]): void;
 }
 
+function explain(
+  refusal: SetRefusal,
+  id: number,
+  symbol: string,
+  path: ReadonlyArray<string | number> = [],
+): string {
+  switch (refusal) {
+    case 'unmounted':
+      return `component ${id} has unmounted`;
+    case 'unknown-component':
+      return `there is no component ${id}`;
+    case 'unknown-symbol':
+      return `${find(id)?.name} has no '${symbol}'`;
+    case 'not-writable':
+      return `'${symbol}' in ${find(id)?.name} is not writable`;
+    case 'bad-path':
+      return `'${symbol}' cannot be set at ${JSON.stringify(path)}`;
+    case 'carries-marker':
+      return 'the value holds a placeholder for something not loaded';
+  }
+}
+
 export function publishSurface(): void {
   if (onServer()) return;
   const summary = (n: InspectNode): ComponentSummary => ({
@@ -85,7 +114,12 @@ export function publishSurface(): void {
     },
     set: (id, symbol, value, path) => {
       activate();
-      return setValue(id, symbol, value, path);
+      const refusal = trySetValue(id, symbol, value, path);
+      if (refusal === null) return true;
+      console.warn(
+        `[runespect] set(${id}, '${symbol}') did nothing: ${explain(refusal, id, symbol, path)}`,
+      );
+      return false;
     },
     get events() {
       return timeline();

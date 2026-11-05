@@ -1,6 +1,6 @@
-import { test, expect, beforeEach, afterEach } from 'vitest';
+import { test, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as agent from '@runespect/agent/internal';
-import type { RunespectEvent } from '@runespect/agent/protocol/internal';
+import { editMessage, type Message, type RunespectEvent } from '@runespect/agent/protocol/internal';
 
 let stop: (() => void) | undefined;
 beforeEach(() => {
@@ -47,6 +47,30 @@ test('a refused send is recorded as a drop, with the reason', () => {
   const [connected, drop, ...rest] = surface().events;
   expect([connected.ev, drop.ev, drop.kind, rest]).toEqual(['connect', 'drop', 'hello', []]);
   expect(String(drop.error)).toContain('DataCloneError');
+});
+
+// A panel's edit gets no answer back, so a refused one is only visible in the log; it says nothing in
+// the console, which belongs to the app.
+test('an edit from the panel that is refused is recorded, without a console warning', () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  let listener: ((m: Message) => void) | undefined;
+  stop = agent.connect({
+    send: () => {},
+    onMessage: (cb) => {
+      listener = cb;
+      return () => (listener = undefined);
+    },
+  });
+  const id = agent.enter('SearchBox');
+  agent.leave(id);
+
+  listener!(editMessage(id, 'query', 'x'));
+
+  expect(surface().events.filter((e) => e.ev === 'refused')).toEqual([
+    expect.objectContaining({ hop: 'agent', id, error: 'unmounted' }),
+  ]);
+  expect(warn).not.toHaveBeenCalled();
+  warn.mockRestore();
 });
 
 test('the surface exposes since() and dump() for polling and for bug reports', () => {

@@ -7,6 +7,7 @@
 // setter functions).
 import { errorValue, isPlainObject, isRoot, type SymbolKind } from './protocol/internal';
 import { snap, track } from './snap.svelte';
+import { record } from './observe';
 
 /** A node as the agent tracks it in the live store. */
 export interface InspectNode {
@@ -264,26 +265,61 @@ export function bind(id: number, symbol: string, setter: (v: unknown) => void): 
   mark(id);
 }
 
-// An edit names the field it changes, and the rest of the value comes from the app's live value,
-// never from the panel's copy: that copy holds markers in place of everything it did not load.
-// Only the objects on the path are copied, so the root is reassigned and $state.raw updates too.
 export function setValue(
   id: number,
   symbol: string,
   value: unknown,
   path: ReadonlyArray<string | number> = [],
 ): boolean {
+  return trySetValue(id, symbol, value, path) === null;
+}
+
+export type SetRefusal =
+  | 'unmounted'
+  | 'unknown-component'
+  | 'unknown-symbol'
+  | 'not-writable'
+  | 'bad-path'
+  | 'carries-marker';
+
+/** setValue, saying why it did nothing; null when it set the value. A refusal is in the event log. */
+export function trySetValue(
+  id: number,
+  symbol: string,
+  value: unknown,
+  path: ReadonlyArray<string | number> = [],
+): SetRefusal | null {
+  const refusal = applyEdit(id, symbol, value, path);
+  if (refusal) record('refused', { id, error: refusal });
+  return refusal;
+}
+
+// An edit names the field it changes, and the rest of the value comes from the app's live value,
+// never from the panel's copy: that copy holds markers in place of everything it did not load.
+// Only the objects on the path are copied, so the root is reassigned and $state.raw updates too.
+function applyEdit(
+  id: number,
+  symbol: string,
+  value: unknown,
+  path: ReadonlyArray<string | number>,
+): SetRefusal | null {
   const set = reading.binders.get(id)?.get(symbol);
-  if (!set || carriesMarker(value, new Set())) return false;
+  if (!set) {
+    const node = find(id);
+    if (node) return symbol in (node.kinds ?? node.values) ? 'not-writable' : 'unknown-symbol';
+    // Ids are handed out in order and not reused until reset(), so one handed out and gone has left.
+    return Number.isInteger(id) && id > 0 && id <= registry.seq ? 'unmounted' : 'unknown-component';
+  }
+  if (carriesMarker(value, new Set())) return 'carries-marker';
   if (!path.length) {
     set(value);
-    return true;
+    return null;
   }
   const live = reading.readers.get(id)?.get(symbol)?.() ?? find(id)?.values[symbol];
   const next = withValueAt(live, path, value);
-  if (next === REFUSED) return false;
+  if (next === REFUSED) return 'bad-path';
   set(next);
-  return true;
+  return null;
 }
 
 function carriesMarker(v: unknown, seen: Set<object>): boolean {
@@ -301,7 +337,9 @@ function withValueAt(root: unknown, path: ReadonlyArray<string | number>, value:
   if (!path.length) return value;
   const [head, ...rest] = path;
   if (Array.isArray(root)) {
-    const i = Number(head);
+    // An index it has, or the next one to append, as an object takes a new key.
+    const i = typeof head === 'number' || /^\d+$/.test(head) ? Number(head) : NaN;
+    if (!Number.isInteger(i) || i < 0 || i > root.length) return REFUSED;
     const child = withValueAt(root[i], rest, value);
     if (child === REFUSED) return REFUSED;
     const copy = root.slice();
