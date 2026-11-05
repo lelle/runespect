@@ -26,13 +26,13 @@ flowchart TB
   port --> panel["#lt;Panel#gt;<br>DevTools context"]
 ```
 
-| hop          | records                                           |
-| ------------ | ------------------------------------------------- |
-| `agent`      | messages sent, refused sends, connect, tier       |
-| `relay`      | what it forwards in each direction                |
-| `background` | sends to a tab it could not deliver               |
-| `panel-port` | connect, disconnect, reconnect, messages received |
-| `panel`      | messages the panel received, panes that failed    |
+| hop          | records                                                                |
+| ------------ | ---------------------------------------------------------------------- |
+| `agent`      | messages sent, refused sends, refused edits and `set()`, connect, tier |
+| `relay`      | what it forwards in each direction                                     |
+| `background` | sends to a tab it could not deliver                                    |
+| `panel-port` | connect, disconnect, reconnect, messages received                      |
+| `panel`      | messages the panel received, panes that failed                         |
 
 The relay cannot reach `window.__runespect` from the isolated world, and the panel cannot reach the
 page at all, so both post their buffers inward: the relay via `window.postMessage` with
@@ -56,7 +56,7 @@ for every hop (`packages/extension/src/mirror.ts`).
 | `t`     | wall-clock ms — how hops merge into one timeline                               |
 | `seq`   | per-hop counter; a gap means the window dropped it, not that it never happened |
 | `hop`   | where it happened                                                              |
-| `ev`    | `tx` `rx` `connect` `reconnect` `disconnect` `drop` `tier` `error`             |
+| `ev`    | `tx` `rx` `connect` `reconnect` `disconnect` `drop` `refused` `tier` `error`   |
 | `kind`  | the protocol message kind, for `tx`/`rx`                                       |
 | `error` | why, on a `drop`; the message, on an `error`                                   |
 | `pane`  | which pane failed to render, on an `error`                                     |

@@ -1,4 +1,4 @@
-import { test, expect, beforeEach, afterEach } from 'vitest';
+import { test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
 import * as agent from '@runespect/agent/internal';
 import type { RunespectSurface } from '@runespect/agent';
@@ -12,6 +12,7 @@ let stop: (() => void) | undefined;
 let target: HTMLElement;
 beforeEach(() => agent.reset());
 afterEach(() => {
+  vi.restoreAllMocks();
   stop?.();
   stop = undefined;
   if (app) unmount(app);
@@ -70,11 +71,98 @@ test('set() changes a value the way an edit from the panel does, and history rec
   expect(JSON.stringify(latest)).toContain('count');
 });
 
-test('set() refuses what it cannot write, and says so', () => {
+// It still answers false, so `if (!set(…))` keeps working; why goes to the console and the event log.
+type SetArgs = Parameters<RunespectSurface['set']>;
+const refusals = (rs: RunespectSurface) =>
+  rs.events.filter((e) => e.ev === 'refused').map((e) => [e.id, e.error]);
+
+function warnings() {
+  return vi.spyOn(console, 'warn').mockImplementation(() => {});
+}
+
+test.each([
+  {
+    refusal: 'unknown-component',
+    args: (): SetArgs => [9999, 'count', 1],
+    says: () => `set(9999, 'count') did nothing: there is no component 9999`,
+  },
+  {
+    refusal: 'unknown-symbol',
+    args: (id: number): SetArgs => [id, 'cuont', 1],
+    says: (id: number) => `set(${id}, 'cuont') did nothing: Counter has no 'cuont'`,
+  },
+  {
+    refusal: 'not-writable',
+    args: (id: number): SetArgs => [id, 'doubled', 1],
+    says: (id: number) => `set(${id}, 'doubled') did nothing: 'doubled' in Counter is not writable`,
+  },
+  {
+    refusal: 'bad-path',
+    args: (id: number): SetArgs => [id, 'count', 1, ['digits']],
+    says: (id: number) => `set(${id}, 'count') did nothing: 'count' cannot be set at ["digits"]`,
+  },
+  {
+    refusal: 'carries-marker',
+    args: (id: number): SetArgs => [id, 'count', { __runespect: 'object' }],
+    says: (id: number) =>
+      `set(${id}, 'count') did nothing: the value holds a placeholder for something not loaded`,
+  },
+])('set() refuses $refusal, and says why', ({ refusal, args, says }) => {
+  const warn = warnings();
   const rs = start(Counter);
   const [counter] = rs.find('Counter');
-  expect(rs.set(counter.id, 'doubled', 1)).toBe(false); // a derived
-  expect(rs.set(9999, 'count', 1)).toBe(false);
+  const call = args(counter.id);
+
+  expect(rs.set(...call)).toBe(false);
+  expect(warn).toHaveBeenCalledWith(`[runespect] ${says(counter.id)}`);
+  expect(refusals(rs)).toEqual([[call[0], refusal]]);
+});
+
+test('set() on a component that has unmounted says so, apart from an id the page never had', () => {
+  const warn = warnings();
+  const rs = start(Counter);
+  const [counter] = rs.find('Counter');
+  unmount(app!);
+  app = undefined;
+  flushSync();
+
+  expect(rs.set(counter.id, 'count', 5)).toBe(false);
+  expect(warn).toHaveBeenCalledWith(
+    `[runespect] set(${counter.id}, 'count') did nothing: component ${counter.id} has unmounted`,
+  );
+  expect(refusals(rs)).toEqual([[counter.id, 'unmounted']]);
+});
+
+test('set() that works says nothing', () => {
+  const warn = warnings();
+  const rs = start(Counter);
+  const [counter] = rs.find('Counter');
+
+  expect(rs.set(counter.id, 'count', 5)).toBe(true);
+  expect(warn).not.toHaveBeenCalled();
+  expect(refusals(rs)).toEqual([]);
+});
+
+// An array takes the indexes it has, and the next one to append, as an object takes a new key.
+test.each([
+  { path: [1], applied: ['a', 'x', 'c'] },
+  { path: [3], applied: ['a', 'b', 'c', 'x'] },
+  { path: ['1'], applied: ['a', 'x', 'c'] },
+  { path: [99], applied: null },
+  { path: [-1], applied: null },
+  { path: [1.5], applied: null },
+  { path: ['foo'], applied: null },
+  { path: [4, 'deep'], applied: null },
+])('set() at $path into an array of three', ({ path, applied }) => {
+  warnings();
+  const rs = start(Counter);
+  const id = agent.enter('List', null, { kinds: { items: 'state' } });
+  agent.report(id, 'items', ['a', 'b', 'c']);
+  agent.bind(id, 'items', (v) => agent.report(id, 'items', v));
+
+  expect(rs.set(id, 'items', 'x', path)).toBe(applied !== null);
+  expect(agent.read(id, 'items')).toEqual(applied ?? ['a', 'b', 'c']);
+  expect(refusals(rs)).toEqual(applied ? [] : [[id, 'bad-path']]);
 });
 
 test('inspect() reads below the first level, as the panel fetches it', () => {

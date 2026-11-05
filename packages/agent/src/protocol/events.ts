@@ -18,6 +18,8 @@ export type EventKind =
   | 'disconnect'
   /** A message was refused or discarded here — the reason belongs in `error`. */
   | 'drop'
+  /** An edit or set() changed nothing: the component in `id`, the reason in `error`. */
+  | 'refused'
   /** The active tier changed (0 = app plugin, 2 = capture, null = none reported). */
   | 'tier'
   /** A pane of the panel failed to render — which one in `pane`, the message in `error`. */
