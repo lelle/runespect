@@ -102,6 +102,11 @@ test.each([
     says: (id: number) => `set(${id}, 'count') did nothing: 'count' cannot be set at ["digits"]`,
   },
   {
+    refusal: 'unknown-symbol',
+    args: (id: number): SetArgs => [id, 'constructor', 1],
+    says: (id: number) => `set(${id}, 'constructor') did nothing: Counter has no 'constructor'`,
+  },
+  {
     refusal: 'carries-marker',
     args: (id: number): SetArgs => [id, 'count', { __runespect: 'object' }],
     says: (id: number) =>

@@ -24,7 +24,7 @@ __runespect.history(); // what changed, flush by flush
 | `events`, `since(seq)`, `dump()` | the event log of every hop: [Event log](event-log.md)                                              |
 
 When `set()` does nothing it returns `false`, warns in the console with the reason, and records it in
-the event log as `{ ev: 'refused', id, error }`. An edit from the panel that changes nothing is
+the event log as `{ ev: 'refused', id, error }`. An edit from the panel that is refused is
 recorded the same way, without the warning:
 
 ```

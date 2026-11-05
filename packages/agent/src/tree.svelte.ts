@@ -306,7 +306,8 @@ function applyEdit(
   const set = reading.binders.get(id)?.get(symbol);
   if (!set) {
     const node = find(id);
-    if (node) return symbol in (node.kinds ?? node.values) ? 'not-writable' : 'unknown-symbol';
+    if (node)
+      return Object.hasOwn(node.kinds ?? node.values, symbol) ? 'not-writable' : 'unknown-symbol';
     // Ids are handed out in order and not reused until reset(), so one handed out and gone has left.
     return Number.isInteger(id) && id > 0 && id <= registry.seq ? 'unmounted' : 'unknown-component';
   }
