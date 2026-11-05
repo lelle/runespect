@@ -1,3 +1,4 @@
+import { tierLabel } from './status';
 import type { HelloMessage } from '@runespect/agent/protocol/internal';
 
 // Which page the panel is looking at.
@@ -12,6 +13,8 @@ export interface Source {
   url?: string;
   title?: string;
   tier?: 0 | 2;
+  /** Why a capture stopped, from its hello. */
+  problem?: string;
   agentVersion?: string;
   /** When we last heard from it. A quiet page and a closed one look identical on a shared bus, so
    *  this is reported as an age rather than used to declare anything dead. */
@@ -31,6 +34,7 @@ export function trackSources(
     url: hello.url,
     title: hello.title,
     tier: hello.tier,
+    problem: hello.problem,
     agentVersion: hello.agentVersion,
     lastSeen: now,
   };
@@ -88,8 +92,12 @@ export function sourceLabel(source: Source): string {
 
 /** The second line of a page in the list: its title, its tier and its agent version, if it said them. */
 export function sourceDetails(source: Source): string {
-  const tier = source.tier === 0 ? 'Live' : source.tier === 2 ? 'Capture' : 'Names only';
-  return [source.title, tier, source.agentVersion && `v${source.agentVersion}`]
+  // Without a url the title already names the row (sourceLabel), so it is not said twice.
+  return [
+    source.url && source.title,
+    tierLabel(source.tier, source.problem),
+    source.agentVersion && `v${source.agentVersion}`,
+  ]
     .filter(Boolean)
     .join(' · ');
 }

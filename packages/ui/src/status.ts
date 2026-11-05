@@ -33,6 +33,13 @@ export interface StatusInput {
   graceElapsed: boolean;
 }
 
+/** What a page's tier is called, in the status chip and in the list of pages alike. */
+export function tierLabel(tier: 0 | 2 | null | undefined, problem?: string | null): string {
+  if (tier === 0) return 'Live';
+  if (tier === 2) return problem ? 'Capture stopped' : 'Experimental';
+  return 'Names only';
+}
+
 export function panelStatus(input: StatusInput): PanelStatus {
   // A version mismatch outranks the tier: the tree may decode wrongly, so naming a tier would be
   // reassuring about data we cannot trust.
@@ -44,13 +51,17 @@ export function panelStatus(input: StatusInput): PanelStatus {
     };
   }
   if (input.tier === 0) {
-    return { level: 'ok', label: 'Live', detail: "live state from the app's runespect plugin" };
+    return {
+      level: 'ok',
+      label: tierLabel(0),
+      detail: "live state from the app's runespect plugin",
+    };
   }
   // A capture reads Svelte's private runtime, which can change on any minor, and cannot edit.
   if (input.tier === 2 && input.problem) {
     return {
       level: 'warn',
-      label: 'Capture stopped',
+      label: tierLabel(2, input.problem),
       detail: input.problem,
       docsUrl: TIER_DOCS_URL,
     };
@@ -58,7 +69,7 @@ export function panelStatus(input: StatusInput): PanelStatus {
   if (input.tier === 2) {
     return {
       level: 'warn',
-      label: 'Experimental',
+      label: tierLabel(2),
       detail:
         "captured from Svelte's private runtime — read-only, and values can be missing or misnamed.",
       docsUrl: TIER_DOCS_URL,
@@ -69,7 +80,7 @@ export function panelStatus(input: StatusInput): PanelStatus {
   if (input.hasTree && input.graceElapsed) {
     return {
       level: 'warn',
-      label: 'Names only',
+      label: tierLabel(null),
       detail: 'component names only — no live state, editing or highlight.',
       docsUrl: TIER_DOCS_URL,
       docsLabel: 'Add the plugin for live state',

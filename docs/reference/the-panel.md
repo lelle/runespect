@@ -21,7 +21,9 @@ What each part of the runespect panel does. The panel is the same in the window 
 ## Which page
 
 - The chip beside the tier names the page the panel follows by its url. When the dev server serves
-  several pages (two tabs, another route), it says how many: `/checkout · 3 pages ▾`.
+  several pages (two tabs, another route), it says how many it has heard from:
+  `/checkout · 3 pages heard ▾`. A page that was reloaded or closed stays counted, since a quiet
+  page and a closed one look the same.
 - ▾ lists them, two lines each: url and when it last spoke; then title, tier and agent version. Click
   one to follow it.
 - A page that navigates on the client is listed under its new url and title.
