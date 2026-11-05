@@ -30,6 +30,27 @@ test('highlight(id) draws a box over the node element, null clears it', () => {
   expect(box.style.display).toBe('none');
 });
 
+// Without element reporting, an instance is found by its place among the elements of its file. A
+// child of a component with no element of its own whose place is not there is left out, rather
+// than boxed as another instance.
+test("a child whose instance cannot be told apart is left out, not boxed as the first one's", () => {
+  const first = agent.enter('Wrapper', null, { loc: '/abs/src/Wrapper.svelte' });
+  agent.enter('Card', first, { loc: '/abs/src/Card.svelte' });
+  const second = agent.enter('Wrapper', null, { loc: '/abs/src/Wrapper.svelte' });
+  agent.enter('Card', second, { loc: '/abs/src/Card.svelte' });
+  tagged('src/Card.svelte');
+
+  agent.highlight(second);
+  expect(document.querySelector<HTMLElement>('[data-runespect-highlight]')?.style.display).not.toBe(
+    'block',
+  );
+
+  agent.highlight(first);
+  expect(document.querySelector<HTMLElement>('[data-runespect-highlight]')?.style.display).toBe(
+    'block',
+  );
+});
+
 test('startPick reports the picked node id on click', () => {
   const id = agent.enter('Foo', null, { loc: '/abs/src/Foo.svelte' });
   const el = tagged('src/Foo.svelte');

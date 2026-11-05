@@ -13,8 +13,9 @@ What each part of the runespect panel does. The panel is the same in the window 
   ([Options](options.md#runespectoptions)).
 - Right-click a row, or press Shift+F10, for **Open in editor**, **Log to console**, **Highlight in
   page** and **Copy name**.
-- Hovering a row highlights its element in the page. **⌖ pick** selects the component under the
-  element you click in the page.
+- Hovering a row highlights its element in the page. A component that renders only other
+  components gets a dashed box around what they render, named `Name (via children)`. **⌖ pick**
+  selects the component under the element you click in the page.
 - Alt+↑ and Alt+↓ move between siblings.
 
 ## Search and filters

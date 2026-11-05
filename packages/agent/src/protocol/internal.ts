@@ -399,7 +399,7 @@ export function applyOps(nodes: SerializedNode[], ops: TreeOp[]): SerializedNode
 }
 
 // Index a node list by id for diffing against the next send.
-export function indexById<N extends { id: number }>(nodes: N[]): Map<number, N> {
+export function indexById<N extends { id: number }>(nodes: ReadonlyArray<N>): Map<number, N> {
   return new Map(nodes.map((n) => [n.id, n]));
 }
 
