@@ -20,9 +20,13 @@ test('how long ago a page spoke: just now, then seconds, then minutes', () => {
 
 // The second line of a row in the page list: what else tells two pages apart.
 test("a page's details: its title, its tier and its agent version, as far as it said them", () => {
-  expect(
-    sourceDetails({ id: 'a', title: 'Shop', tier: 0, agentVersion: '0.2.0', lastSeen: 0 }),
-  ).toBe('Shop · Live · v0.2.0');
-  expect(sourceDetails({ id: 'a', title: 'Shop', tier: 2, lastSeen: 0 })).toBe('Shop · Capture');
+  const page = { id: 'a', url: '/', title: 'Shop', lastSeen: 0 };
+  expect(sourceDetails({ ...page, tier: 0, agentVersion: '0.2.0' })).toBe('Shop · Live · v0.2.0');
+  expect(sourceDetails({ ...page, tier: 2 })).toBe('Shop · Experimental');
+  expect(sourceDetails({ ...page, title: undefined, tier: 2, problem: 'no root' })).toBe(
+    'Capture stopped',
+  );
   expect(sourceDetails({ id: 'a', lastSeen: 0 })).toBe('Names only');
+  // Without a url the title is already the row's name, so it is not said twice.
+  expect(sourceDetails({ id: 'a', title: 'Shop', tier: 0, lastSeen: 0 })).toBe('Live');
 });

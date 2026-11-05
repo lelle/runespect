@@ -39,7 +39,8 @@ const navigate = (url: string) => {
   history.pushState(null, '', url);
   navigation.dispatchEvent(new Event('currententrychange'));
 };
-const titleChanges = () => new Promise((r) => setTimeout(r, 0)); // MutationObserver is a microtask
+// A page looks at its url and title after the turn, and a <title> change is a mutation record.
+const settled = () => new Promise((r) => setTimeout(r, 0));
 
 test("the hello names the agent's version", () => {
   const { sent } = connected();
@@ -47,34 +48,62 @@ test("the hello names the agent's version", () => {
   expect(sent.find((m) => m.kind === 'hello')).toMatchObject({ agentVersion: agent.version });
 });
 
-test('after a panel has asked, a navigation to a new url says hello again', () => {
+test('after a panel has asked, a navigation to a new url says hello again', async () => {
   const { hellos, ask } = connected();
   ask();
   const before = hellos().length;
 
   navigate('/checkout');
+  await settled();
 
   expect(hellos().slice(before)).toEqual([{ url: '/checkout', title: 'Shop' }]);
 });
 
-test('a title the app sets after the url changed says hello again with it', async () => {
+test('a title the app sets later says hello again with it', async () => {
   const { hellos, ask } = connected();
   ask();
   navigate('/checkout');
+  await settled();
   const before = hellos().length;
 
   document.title = 'Checkout';
-  await titleChanges();
+  await settled();
 
   expect(hellos().slice(before)).toEqual([{ url: '/checkout', title: 'Checkout' }]);
 });
 
-test('a navigation that changes neither url nor title says nothing', () => {
+test('a navigation that sets its title in the same turn says hello once', async () => {
+  const { hellos, ask } = connected();
+  ask();
+  const before = hellos().length;
+
+  navigate('/checkout');
+  document.title = 'Checkout';
+  await settled();
+
+  expect(hellos().slice(before)).toEqual([{ url: '/checkout', title: 'Checkout' }]);
+});
+
+test('a change only to a secret query value, which the hello hides, says nothing', async () => {
+  const { hellos, ask } = connected();
+  history.replaceState(null, '', '/?token=abc');
+  ask();
+  await settled();
+  const before = hellos().length;
+
+  navigate('/?token=def');
+  await settled();
+
+  expect(hellos().length).toBe(before);
+});
+
+test('a navigation that changes neither url nor title says nothing', async () => {
   const { hellos, ask } = connected();
   ask();
   const before = hellos().length;
 
   navigation.dispatchEvent(new Event('currententrychange'));
+  await settled();
 
   expect(hellos().length).toBe(before);
 });
@@ -85,7 +114,7 @@ test('before any panel has asked, a navigation says nothing', async () => {
 
   navigate('/checkout');
   document.title = 'Checkout';
-  await titleChanges();
+  await settled();
 
   expect(hellos().length).toBe(before);
 });

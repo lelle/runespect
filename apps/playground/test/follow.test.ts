@@ -259,13 +259,14 @@ test('a page that says hello without a url is followed by its id', () => {
   expect(p.state.followedId).toBe('no-url');
 });
 
-// Two pages at one url: the one heard from last is the one followed.
-test('of two pages at one url, the panel follows the one that spoke last', () => {
+// Two pages at one url: the newest one is followed (a reload is a new page). A page the panel
+// already knows saying hello again, as pages do when they navigate or retitle, does not take over.
+test('of two pages at one url, the panel follows the newest, and keeps to it', () => {
   const p = panel();
   p.hear(hello('first', '/cart'));
   p.hear(hello('second', '/cart'));
   expect(p.state.followedId).toBe('second');
 
   p.hear(hello('first', '/cart'));
-  expect(p.state.followedId).toBe('first');
+  expect(p.state.followedId).toBe('second');
 });

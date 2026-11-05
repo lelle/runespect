@@ -367,7 +367,7 @@
               aria-expanded={sourcesOpen}
               title="Choose which page to follow"
               onclick={() => (sourcesOpen = !sourcesOpen)}
-              >{sourceLabel(followed)} · {sources.length} pages ▾</button
+              >{sourceLabel(followed)} · {sources.length} pages heard ▾</button
             >
           {:else}
             <span class="source" data-testid="runespect-source">{sourceLabel(followed)}</span>
@@ -566,6 +566,8 @@
   .sources {
     position: absolute;
     right: 8px;
+    /* A long route or title ends in an ellipsis rather than pushing the list past the panel. */
+    max-width: calc(100% - 16px);
     margin-top: 4px;
     list-style: none;
     padding: 4px;
@@ -668,7 +670,9 @@
     white-space: nowrap;
   }
   /* A real app's route is long: it gives way to the filters and ends in an ellipsis. */
-  .source-chip {
+  .source-chip,
+  .sources .label,
+  .sources .details {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

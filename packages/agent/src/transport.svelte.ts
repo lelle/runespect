@@ -104,14 +104,15 @@ export function connect(transport: Transport): () => void {
     first = false;
   };
 
+  // What the last hello said, so only a change to what a hello carries says hello again.
+  let announced: SourceIdentity = {};
+
   // Live: this tree comes from the app's own instrumentation, so the panel can offer edits,
   // highlighting and the picker. Announced on connect rather than only when asked — a panel that
   // was already open sent its one `request` before this page existed, and would otherwise show a
   // live plugin app as Names only forever.
-  let announced = '';
-  const announce = (): void => {
-    const page = identity();
-    announced = `${page.url}\n${page.title}`;
+  const announce = (page = identity()): void => {
+    announced = page;
     send(
       helloMessage(PROTOCOL_VERSION, 0, {
         ...page,
@@ -128,10 +129,17 @@ export function connect(transport: Transport): () => void {
   let stopWatchingPage: (() => void) | null = null;
   const watchPage = (): void => {
     if (stopWatchingPage || typeof document === 'undefined') return;
-    const check = (): void => {
-      const page = identity();
-      if (`${page.url}\n${page.title}` !== announced) announce();
-    };
+    // Looked at after the turn, so a navigation and the title it sets a moment later make one
+    // hello; the raw url and title first, since most changes to <head> touch neither.
+    let seen = '';
+    const check = (): void =>
+      queueMicrotask(() => {
+        const raw = `${location.pathname}${location.search}\n${document.title}`;
+        if (raw === seen) return;
+        seen = raw;
+        const page = identity();
+        if (page.url !== announced.url || page.title !== announced.title) announce(page);
+      });
     const navigation = (globalThis as { navigation?: EventTarget }).navigation;
     navigation?.addEventListener('currententrychange', check);
     const titles = new MutationObserver(check);

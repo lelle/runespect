@@ -176,14 +176,12 @@ test('a page that navigates on the client is followed to its new url', async ({ 
   const panel = await context.newPage();
   await panel.goto('/__runespect/?source=/?case=navigates');
   const source = panel.locator('[data-testid="runespect-source"]');
-  await expect(source).toContainText('/?case=navigates');
+  await expect(source).toHaveText(/^\/\?case=navigates\b(?!-)/);
 
-  await app.evaluate(() => {
-    history.pushState(null, '', '/?case=navigates-moved');
-    document.title = 'Moved';
-  });
+  // The url alone, with the title left as it is: only the Navigation API can tell of this one.
+  await app.evaluate(() => history.pushState(null, '', '/?case=navigates-moved'));
 
-  await expect(source).toContainText('/?case=navigates-moved');
+  await expect(source).toHaveText(/^\/\?case=navigates-moved\b/);
   await expect(panel.locator('[data-select="Counter"]').first()).toBeVisible();
 });
 

@@ -1,6 +1,7 @@
 import {
   historyRequestMessage,
   requestMessage,
+  type HelloMessage,
   type ToPageMessage,
   type ToPanelMessage,
 } from '@runespect/agent/protocol/internal';
@@ -26,7 +27,7 @@ export interface Following {
   readonly rememberedUrl: string | null;
   readonly page: PageFacts;
   readonly chosenId: string | null;
-  /** Opened for one url: follow nothing else until it says hello. */
+  /** Opened for one url: follow only the page at it, and go with that page when it navigates. */
   readonly waitForUrl: boolean;
 }
 
@@ -73,12 +74,20 @@ export function startFollowing(opts: {
   };
 }
 
+// A step that changes nothing but the state it carries.
+const quiet = (state: Following): FollowStep => ({
+  state,
+  deliver: null,
+  send: [],
+  switched: false,
+});
+
 export function follow(state: Following, event: FollowEvent, now: number): FollowStep {
   if (event.type === 'command') {
     return { state, deliver: null, send: [addressed(state, event.msg)], switched: false };
   }
   if (event.type === 'pick') {
-    if (event.id === state.followedId) return { state, deliver: null, send: [], switched: false };
+    if (event.id === state.followedId) return quiet(state);
     const url = state.sources.find((s) => s.id === event.id)?.url ?? null;
     return refollow(state, { ...state, chosenId: event.id, rememberedUrl: url });
   }
@@ -86,18 +95,10 @@ export function follow(state: Following, event: FollowEvent, now: number): Follo
   const msg = event.msg;
   // A hello from anyone is how the panel learns a page exists, so it is tracked before the filter.
   // The followed page saying hello under a new url has navigated on the client: that url is now the
-  // one to come back to, so the panel goes with it.
-  const heard =
-    msg.kind === 'hello'
-      ? refollow(state, {
-          ...state,
-          sources: trackSources(state.sources, msg, now),
-          rememberedUrl:
-            msg.from === state.followedId && msg.url && state.rememberedUrl
-              ? msg.url
-              : state.rememberedUrl,
-        })
-      : { state, deliver: null, send: [], switched: false };
+  // one to come back to, so the panel goes with it. Another page it already knows only updates the
+  // list: pages say hello on their own when they navigate or retitle, and that must not take the
+  // panel away from the page it follows. A new page at the url (a reload) still does.
+  const heard = msg.kind === 'hello' ? heardHello(state, msg, now) : quiet(state);
   if (!belongsToFollowed(msg, heard.state)) return heard;
   if (msg.kind !== 'hello') return { ...heard, deliver: msg };
   const page: PageFacts = {
@@ -109,15 +110,23 @@ export function follow(state: Following, event: FollowEvent, now: number): Follo
   return { ...heard, state: { ...heard.state, page } };
 }
 
+function heardHello(state: Following, msg: HelloMessage, now: number): FollowStep {
+  const sources = trackSources(state.sources, msg, now);
+  const known = state.sources.some((s) => s.id === msg.from);
+  if (known && state.followedId && msg.from !== state.followedId) {
+    return quiet({ ...state, sources });
+  }
+  const navigatedTo = msg.from === state.followedId && state.rememberedUrl ? msg.url : undefined;
+  return refollow(state, { ...state, sources, rememberedUrl: navigatedTo ?? state.rememberedUrl });
+}
+
 // Re-choose after the known pages or the choice changed. Following a new page asks it for its tree
 // (it answers with its hello too) and for what happened before the panel connected.
 function refollow(before: Following, next: Following): FollowStep {
   const followedId = chooseSource(next.sources, next.chosenId, next.rememberedUrl, {
     waitForUrl: next.waitForUrl,
   });
-  if (followedId === before.followedId) {
-    return { state: { ...next, followedId }, deliver: null, send: [], switched: false };
-  }
+  if (followedId === before.followedId) return quiet({ ...next, followedId });
   const switched = before.followedId !== null;
   const state = { ...next, followedId, page: switched ? unknownPage() : next.page };
   return {

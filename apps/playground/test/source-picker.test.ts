@@ -64,7 +64,7 @@ test('several sources: the chip counts the pages, and each row of the list says 
   emit(hello('b', '/checkout', 'Shop', '0.2.0'));
   emit(hello('c', '/', 'Shop', '0.1.1'));
 
-  expect(source(target).textContent!.trim()).toBe('/checkout · 3 pages ▾');
+  expect(source(target).textContent!.trim()).toBe('/checkout · 3 pages heard ▾');
   source(target).click();
   flushSync();
   const rows = [...picker(target)!.querySelectorAll('button')].map((row) => ({
@@ -101,6 +101,24 @@ test('a panel opened for a url keeps following its page when the page navigates'
 
   expect(source(target).textContent).toContain('/checkout');
   expect(target.querySelector('[data-select="CartPage"]')).toBeTruthy();
+});
+
+// Pages say hello on their own when they navigate or retitle. One the panel already knows must not
+// take it away from the page it follows; a new page at that url (a reload) still does, as before.
+test('a known page that says hello again does not take the panel from the page it follows', () => {
+  const { target, emit } = panelWith('/checkout');
+  emit(hello('a', '/checkout', 'Shop'));
+  emit(hello('b', '/checkout', 'Shop'));
+  emit({ ...treeMessage([node('FromB')]), from: 'b' } as Message);
+
+  emit(hello('a', '/checkout', '(1) Shop'));
+  flushSync();
+  expect(target.querySelector('[data-select="FromB"]')).toBeTruthy();
+
+  emit(hello('c', '/checkout', 'Shop'));
+  emit({ ...treeMessage([node('FromC')]), from: 'c' } as Message);
+  flushSync();
+  expect(target.querySelector('[data-select="FromC"]')).toBeTruthy();
 });
 
 test('switching source switches the tree', () => {
