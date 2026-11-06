@@ -12,8 +12,10 @@ import {
   type ToPanelMessage,
   PROTOCOL_VERSION,
   TIER0_FLAG,
+  type Commit,
   type Message,
   type Transport,
+  type TreeOp,
 } from './protocol/internal';
 import { commitsSince, historyTruncated } from './history';
 import { publishSurface } from './surface';
@@ -22,6 +24,7 @@ import { highlight, logNode, startPick, stopPick, storeGlobal } from './page-act
 import { activate, inspectPath, serialize, watchFlushes, WIRE_DEPTH } from './wire.svelte';
 import { setValue } from './tree.svelte';
 import { version } from '../package.json';
+import { linkStep, startLink, type Link, type LinkEffect, type LinkEvent } from './link';
 
 /** A per-instance id: random + time, so two never collide in any realm. */
 const newInstanceId = (): string => `${Math.random().toString(36).slice(2)}-${Date.now()}`;
@@ -74,9 +77,6 @@ const connections = new Set<() => void>();
 // push a tree snapshot whenever the store changes, and apply incoming edit commands.
 // Returns a disconnect function.
 export function connect(transport: Transport): () => void {
-  // A late-connecting panel (or one that asked via `request`) gets a full snapshot; after
-  // that, only deltas go over the wire.
-  let first = true;
   publishSurface();
   record('connect');
 
@@ -101,20 +101,9 @@ export function connect(transport: Transport): () => void {
     }
   };
 
-  const sendSnapshot = (): void => {
-    send(treeMessage(serialize(WIRE_DEPTH)));
-    first = false;
-  };
-
-  // What the last hello said, so only a change to what a hello carries says hello again.
-  let announced: SourceIdentity = {};
-
   // Live: this tree comes from the app's own instrumentation, so the panel can offer edits,
-  // highlighting and the picker. Announced on connect rather than only when asked — a panel that
-  // was already open sent its one `request` before this page existed, and would otherwise show a
-  // live plugin app as Names only forever.
-  const announce = (page = identity()): void => {
-    announced = page;
+  // highlighting and the picker.
+  const hello = (page: SourceIdentity): void =>
     send(
       helloMessage(PROTOCOL_VERSION, 0, {
         ...page,
@@ -122,13 +111,54 @@ export function connect(transport: Transport): () => void {
         ...(editorLinks.on ? {} : { openInEditor: false as const }),
       }),
     );
+
+  // link.ts decides; this carries it out. A flush's ops are only known inside the flush. The link
+  // starts before the transport is listened to, which may hand over what it holds at once.
+  const started = startLink(identity());
+  let link: Link = started.link;
+  let stop: (() => void) | null = null;
+  let stopWatchingPage: (() => void) | null = null;
+  const step = (event: LinkEvent, flushed?: { ops: TreeOp[]; commit: Commit | null }): void => {
+    const next = linkStep(link, event);
+    link = next.link;
+    next.effects.forEach((effect) => perform(effect, flushed));
+  };
+  const perform = (
+    effect: LinkEffect,
+    flushed?: { ops: TreeOp[]; commit: Commit | null },
+  ): void => {
+    switch (effect.do) {
+      case 'hello':
+        return hello(effect.page);
+      case 'tree':
+        return send(treeMessage(serialize(WIRE_DEPTH)));
+      case 'ops':
+        if (flushed?.commit) send(opsMessage(flushed.ops, flushed.commit.seq, flushed.commit.t));
+        return;
+      case 'follow-flushes':
+        activate();
+        stop ??= watchFlushes((ops, commit) =>
+          step({ type: 'flush', changed: commit !== null }, { ops, commit }),
+        );
+        return;
+      case 'watch-page':
+        return watchPage();
+      case 'stop':
+        stop?.();
+        stopWatchingPage?.();
+        stopPick();
+        highlight(null);
+        return;
+      default: {
+        const unknown: never = effect;
+        return unknown;
+      }
+    }
   };
 
   // An app that navigates on the client stays the same page under a new url, and its title often
-  // follows a moment later; it says hello again so the panel lists it as it is now. Only once a
-  // panel has asked: until then the page sends nothing. The Navigation API tells of every history
-  // change without wrapping the app's own history.pushState.
-  let stopWatchingPage: (() => void) | null = null;
+  // follows a moment later; the link says hello again so the panel lists it as it is now. The
+  // Navigation API tells of every history change without wrapping the app's own history.pushState.
   const watchPage = (): void => {
     if (stopWatchingPage || typeof document === 'undefined') return;
     // Looked at after the turn, so a navigation and the title it sets a moment later make one
@@ -139,8 +169,7 @@ export function connect(transport: Transport): () => void {
         const raw = `${location.pathname}${location.search}\n${document.title}`;
         if (raw === seen) return;
         seen = raw;
-        const page = identity();
-        if (page.url !== announced.url || page.title !== announced.title) announce(page);
+        step({ type: 'page', page: identity() });
       });
     const navigation = (globalThis as { navigation?: EventTarget }).navigation;
     navigation?.addEventListener('currententrychange', check);
@@ -152,17 +181,6 @@ export function connect(transport: Transport): () => void {
     };
   };
 
-  // Nothing is sent as the app changes until a panel asks: then this transport follows every flush.
-  let stop: (() => void) | null = null;
-  const follow = (): void => {
-    activate();
-    stop ??= watchFlushes((tree, ops, commit) => {
-      if (first) {
-        send(treeMessage(tree()));
-        first = false;
-      } else if (commit) send(opsMessage(ops, commit.seq, commit.t));
-    });
-  };
   const off = transport.onMessage?.((msg: Message) => {
     if (!isRunespectMessage(msg)) return;
     record('rx', { kind: msg.kind });
@@ -174,16 +192,8 @@ export function connect(transport: Transport): () => void {
     // acting on one meant for a different tab would edit the wrong app's state.
     if (msg.to && msg.to !== SOURCE_ID) return;
     if (msg.kind === 'edit') setValue(msg.id, msg.symbol, msg.value, msg.path ?? []);
-    else if (msg.kind === 'request') {
-      // A panel asks every page who is there before it picks one, and a hello answers that. Asked by
-      // name, or by a panel this transport already serves (a reconnect), the page sends its tree.
-      if (msg.to || stop) {
-        follow();
-        sendSnapshot();
-      }
-      announce();
-      watchPage();
-    } else if (msg.kind === 'highlight') highlight(msg.id);
+    else if (msg.kind === 'request') step({ type: 'request', toSelf: !!msg.to, page: identity() });
+    else if (msg.kind === 'highlight') highlight(msg.id);
     else if (msg.kind === 'pick') {
       if (msg.active) startPick((id) => send(pickedMessage(id)));
       else stopPick();
@@ -194,17 +204,16 @@ export function connect(transport: Transport): () => void {
     else if (msg.kind === 'inspect')
       send(hydrateMessage(msg.id, msg.path, inspectPath(msg.id, msg.path, msg.limit)));
   });
-  announce();
+  started.effects.forEach((effect) => perform(effect));
 
   // A panel that goes away mid-pick (DevTools closed, the socket dropped) must not leave the page
   // swallowing its next click under a highlight nobody asked for.
+  // Commands do not go through the link, so the transport stops first: whatever fails after it,
+  // a disconnected page hears nothing more.
   const disconnect = (): void => {
     if (!connections.delete(disconnect)) return;
-    stop?.();
-    stopWatchingPage?.();
-    if (off) off();
-    stopPick();
-    highlight(null);
+    off?.();
+    step({ type: 'disconnect' });
   };
   connections.add(disconnect);
   return disconnect;
