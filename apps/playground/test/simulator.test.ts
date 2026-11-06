@@ -68,38 +68,68 @@ test('an update lost on the way is noticed with the next one, and the tree fetch
   expect(sim.shown).toBe(3);
 });
 
-// ── page continuity (the next step): today a reload or a closed tab leaves its row behind ──
+// ── page continuity: a reload or a closed tab leaves no row behind ──
 
-// Today a reload or a closed tab leaves its row behind; page continuity is the next change.
-test('today a page reloaded under the panel leaves its old row behind', () => {
+test('a page reloaded under the panel has one row, and the panel follows it', () => {
   const sim = simulate();
   sim.openPanel();
   const t1 = sim.open('/');
   sim.settle();
-  sim.reload(t1);
+  const t2 = sim.reload(t1);
   sim.settle();
 
-  expect(sim.rowsMatchTabs()).toBe('missing ; stale t1');
+  expect(sim.rows).toEqual([t2]);
+  expect(sim.followed).toBe(t2);
 });
 
-test('today a closed tab keeps its row', () => {
+test('a closed tab has no row', () => {
   const sim = simulate();
   sim.openPanel();
-  sim.open('/a');
+  const a = sim.open('/a');
   const b = sim.open('/b');
   sim.settle();
   sim.close(b);
   sim.settle();
 
-  expect(sim.rowsMatchTabs()).toBe(`missing ; stale ${b}`);
+  expect(sim.rows).toEqual([a]);
+});
+
+test('a reload whose bye is lost: the panel follows the new page once the old one is silent', () => {
+  const sim = simulate();
+  sim.openPanel();
+  const t1 = sim.open('/');
+  sim.settle();
+  sim.loseNext(t1);
+  const t2 = sim.reload(t1);
+  sim.settle();
+
+  expect(sim.rows).toEqual([t2]);
+  expect(sim.followed).toBe(t2);
+});
+
+// Found by a random schedule: the request after a pick was lost, the page sent no tree and so no
+// gap, and the panel waited for good.
+test('a request by name that is lost is sent again, until the page answers with its tree', () => {
+  const sim = simulate();
+  sim.openPanel();
+  sim.open('/a');
+  const b = sim.open('/b');
+  sim.settle();
+  sim.change(b);
+  sim.loseFromPanel(2);
+  sim.pick(b);
+  sim.settle();
+
+  expect(sim.followed).toBe(b);
+  expect(sim.shown).toBe(1);
 });
 
 // ── orderings nobody wrote down ──
 
 const URLS = ['/', '/a', '/b'];
 
-function randomRun(seed: number, loss: number) {
-  const sim = simulate({ seed, loss });
+function randomRun(seed: number, loss: number, lossDown = 0) {
+  const sim = simulate({ seed, loss, lossDown });
   const r = sim.rand;
   const any = <T>(xs: T[]): T => xs[Math.floor(r() * xs.length)];
   const panelAt = Math.floor(r() * 6);
@@ -113,23 +143,25 @@ function randomRun(seed: number, loss: number) {
     else if (roll < 0.82) sim.navigate(any(tabs), any(URLS));
     else if (roll < 0.87) sim.reload(any(tabs));
     else if (roll < 0.9 && tabs.length > 1) sim.close(any(tabs));
+    else if (roll < 0.95) sim.tick(Math.floor(r() * 1500));
     else if (i > panelAt && sim.rows.length) sim.pick(any(sim.rows));
   }
   return sim;
 }
 
-test('200 random schedules with nothing lost keep the invariants, and show the followed page', () => {
+test('200 random schedules with nothing lost keep the invariants, one row per tab, and show the followed page', () => {
   for (let seed = 1; seed <= 200; seed++) {
     const sim = randomRun(seed, 0);
     sim.settle();
+    expect(sim.rowsMatchTabs(), `seed ${seed}`).toBeNull();
     const f = sim.followed;
     if (f && sim.alive(f)) expect(sim.shown, `seed ${seed}`).toBe(sim.value(f));
   }
 });
 
-test('200 random schedules that lose a fifth of what pages send end showing the followed page', () => {
+test('200 random schedules that lose messages either way end showing the followed page', () => {
   for (let seed = 1; seed <= 200; seed++) {
-    const sim = randomRun(seed, 0.2);
+    const sim = randomRun(seed, 0.2, 0.1);
     sim.heal();
     const f = sim.followed;
     if (f && sim.alive(f))

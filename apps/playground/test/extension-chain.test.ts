@@ -4,6 +4,7 @@ import * as agent from '@runespect/agent/internal';
 import {
   PANEL_PORT,
   isControl,
+  pingMessage,
   requestMessage,
   type ControlMessage,
   type Message,
@@ -163,4 +164,19 @@ test("a gap the panel reports reaches the page's timeline", async () => {
   expect(pageEvents().filter((e) => e.ev === 'gap')).toEqual([
     expect.objectContaining({ hop: 'panel', from: 'i7', expected: 4, got: 5 }),
   ]);
+});
+
+// Page continuity in the extension: a ping reaches the page by its tab, and a page's bye comes back.
+test('a ping reaches the page, and its bye reaches the panel', async () => {
+  const { chrome, port, heard } = await chain();
+  const page = heard.find((m) => m.kind === 'hello')!.from!;
+  heard.length = 0;
+
+  port.send(pingMessage(page));
+  await chrome.settle();
+  expect(heard.map((m) => m.kind)).toEqual(['hello']);
+
+  window.dispatchEvent(new Event('pagehide'));
+  await chrome.settle();
+  expect(heard.map((m) => m.kind)).toEqual(['hello', 'bye']);
 });

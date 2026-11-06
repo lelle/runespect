@@ -35,7 +35,7 @@ heard before, means a message was lost or came out of order on the way: the pane
 (see [the event log](event-log.md)); the panel window also warns once per page in its console. A
 message heard before is dropped. A number skipped in the page the panel follows asks that page
 again with `request` and `history-request` (since 0), so the tree and the history match the page
-whatever was lost, up to three times until its tree comes; an `ops` that shows the gap is not applied, since it
+whatever was lost; with no tree within a second it asks again, three times at most; an `ops` that shows the gap is not applied, since it
 builds on what came before, while a message that stands on its own is. A page that connects again
 counts from 1.
 
@@ -66,8 +66,11 @@ sequenceDiagram
 ```
 
 The hello on connect is for a panel that was open before the page loaded: its one `request` went
-out before the page existed. A reload is a new page with a new id; the panel follows it again by its
-url.
+out before the page existed. A reload is a new page with a new id. The page before it says `bye`,
+and the new one names it in `replaces`, so the panel follows the new page in its place; one whose
+`bye` was lost is pinged, and gone if it does not answer within a second. The extension's panel hears one tab, routed
+by tab, so there a page that replaces the followed page is followed at once: a page that is
+unloading cannot always post its `bye` to the content script.
 
 ### Opening a value
 

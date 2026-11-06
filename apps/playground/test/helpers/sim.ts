@@ -1,5 +1,6 @@
 import { linkStep, startLink, type Link, type LinkEffect } from '@runespect/agent/internal';
 import {
+  byeMessage,
   helloMessage,
   historyMessage,
   opsMessage,
@@ -10,27 +11,35 @@ import {
 } from '@runespect/agent/protocol/internal';
 import {
   EMPTY,
-  follow,
   followedIdOf,
   hold,
+  listedSources,
   panelHeard,
+  panelStep,
+  repairDue,
   startFollowing,
-  type Following,
   type FollowStep,
   type Gap,
+  type HeardStep,
   type Held,
-  type Numbers,
+  type PanelSide,
 } from '@runespect/ui/internal';
 import { node } from './panel';
 
 // Pages and one panel on one bus, with no browser: each tab runs the agent's Link reducer and the
-// panel runs panelHeard, the steps <Panel> takes; only the I/O around them is made up here. The bus
-// keeps each sender's messages in order, as the dev server's socket does, and can lose what a page
-// sends. After every step the invariants are checked, and the first one broken throws with the step
-// that broke it.
+// panel runs panelHeard and follow, the steps <Panel> takes; only the I/O around them is made up
+// here, with a clock that moves only when the test says so. The bus keeps each sender's messages in
+// order, as the dev server's socket does, and can lose messages either way. After every step the
+// invariants are checked, and the first one broken throws with the steps that led to it.
+
+/** A browser tab: its sessionStorage outlives the page loads in it. */
+interface Slot {
+  key: string | null;
+}
 
 interface Tab {
   id: string;
+  slot: Slot;
   url: string;
   link: Link;
   /** The n of its last message. */
@@ -41,12 +50,12 @@ interface Tab {
   watching: boolean;
   askedByName: boolean;
   alive: boolean;
+  /** Went before a panel had spoken to it, so it said no bye. */
+  diedQuiet: boolean;
 }
 
-interface PanelSide {
-  following: Following;
-  numbers: Numbers;
-  repairs: ReadonlyMap<string, number>;
+interface PanelView {
+  side: PanelSide;
   held: Held;
 }
 
@@ -54,6 +63,8 @@ export interface SimOptions {
   seed?: number;
   /** The chance that a message from a page is lost on the way. */
   loss?: number;
+  /** The chance that a message from the panel is lost on the way. */
+  lossDown?: number;
 }
 
 /** mulberry32: a few lines, no dependency, the same sequence for the same seed. */
@@ -71,20 +82,24 @@ export function random(seed: number): () => number {
 export function simulate(options: SimOptions = {}) {
   const rand = random(options.seed ?? 1);
   let loss = options.loss ?? 0;
+  let lossDown = options.lossDown ?? 0;
   const tabs: Tab[] = [];
   const up = new Map<string, ToPanelMessage[]>();
   const down = new Map<string, ToPageMessage[]>();
+  const timers: { at: number; what: string; run: () => void }[] = [];
   const gaps: Gap[] = [];
   const log: string[] = [];
-  let panel: PanelSide | null = null;
+  let panel: PanelView | null = null;
   let clock = 0;
   let loads = 0;
   const loseNext = new Set<string>();
+  let loseFromPanel = 0;
   /** Pages a message was lost from: a gap from any other page is a bug. */
   const lostFrom = new Set<string>();
   let forever: (() => void) | null = null;
 
   const value = (tab: Tab) => node(1, 'App', { count: tab.value });
+  const page = (tab: Tab) => ({ url: tab.url, title: tab.url, visible: true });
 
   function pageSends(tab: Tab, msg: ToPanelMessage): void {
     const stamped = { ...msg, from: tab.id, n: ++tab.sent };
@@ -100,12 +115,15 @@ export function simulate(options: SimOptions = {}) {
 
   function perform(tab: Tab, effect: LinkEffect): void {
     if (effect.do === 'hello') {
-      pageSends(tab, helloMessage(PROTOCOL_VERSION, 0, effect.page));
+      const replaces = effect.replaces ? { replaces: effect.replaces } : {};
+      pageSends(tab, helloMessage(PROTOCOL_VERSION, 0, { ...effect.page, ...replaces }));
     } else if (effect.do === 'tree') pageSends(tab, treeMessage([value(tab)]));
     else if (effect.do === 'ops') {
       pageSends(tab, opsMessage([{ op: 'update', node: value(tab) }], tab.commit, clock));
     } else if (effect.do === 'follow-flushes') tab.watching = true;
     else if (effect.do === 'stop') tab.watching = false;
+    else if (effect.do === 'remember') tab.slot.key = tab.id;
+    else if (effect.do === 'bye') pageSends(tab, byeMessage());
   }
 
   function linkHears(tab: Tab, event: Parameters<typeof linkStep>[1]): void {
@@ -118,24 +136,35 @@ export function simulate(options: SimOptions = {}) {
     if (msg.to && msg.to !== tab.id) return;
     if (msg.kind === 'request') {
       if (msg.to) tab.askedByName = true;
-      linkHears(tab, { type: 'request', toSelf: !!msg.to, page: { url: tab.url, title: tab.url } });
-    } else if (msg.kind === 'history-request') pageSends(tab, historyMessage([], false));
+      linkHears(tab, { type: 'request', toSelf: !!msg.to, page: page(tab) });
+    } else if (msg.kind === 'ping') linkHears(tab, { type: 'ping', page: page(tab) });
+    else if (msg.kind === 'history-request') pageSends(tab, historyMessage([], false));
   }
 
   function panelSends(messages: ToPageMessage[]): void {
     for (const msg of messages) {
       // No tab is asked by name unless the panel follows it.
-      if (msg.kind === 'request' && msg.to && followedIdOf(panel!.following) !== msg.to) {
+      if (msg.kind === 'request' && msg.to && followed() !== msg.to) {
         throw new Error(`the panel asked ${msg.to} by name while following ${followed()}`);
+      }
+      if (loseFromPanel > 0 || (lossDown && rand() < lossDown)) {
+        loseFromPanel = Math.max(0, loseFromPanel - 1);
+        log.push(`  lost ${msg.kind}${msg.to ? ` to ${msg.to}` : ''} from the panel`);
+        continue;
       }
       for (const tab of tabs) if (tab.alive) down.get(tab.id)!.push(msg);
     }
   }
 
-  // As <Panel> applies a step: the new focus, what it asks, and what it shows.
+  function later(at: number, what: string, run: () => void): void {
+    timers.push({ at, what, run });
+    timers.sort((a, b) => a.at - b.at);
+  }
+
+  // As <Panel> applies a step: the new focus, what it asks, what it shows, and its timers.
   function panelApplies(step: FollowStep): void {
     const p = panel!;
-    p.following = step.state;
+    p.side = { ...p.side, following: step.state };
     if (step.switched) p.held = EMPTY;
     panelSends(step.send);
     const shown = step.deliver;
@@ -145,25 +174,32 @@ export function simulate(options: SimOptions = {}) {
     else if (shown?.kind === 'ops') {
       p.held = hold(p.held, { type: 'ops', ops: shown.ops, commit: shown.commit, t: 0 }).state;
     }
+    for (const { id, at } of step.timers) {
+      later(at, `wait for ${id}`, () =>
+        panelHearsStep(panelStep(panel!.side, { type: 'timeout', id }, clock)),
+      );
+    }
   }
 
-  function panelHears(msg: ToPanelMessage): void {
+  function panelHearsStep(step: HeardStep): void {
     const p = panel!;
-    const step = panelHeard(p.following, p.numbers, p.repairs, msg, ++clock);
-    p.numbers = step.numbers;
-    p.repairs = step.repairs;
+    p.side = step.side;
     if (step.gap) gaps.push(step.gap);
+    if (step.repairAt !== null) {
+      later(step.repairAt, 'repair', () => panelHearsStep(repairDue(panel!.side, clock)));
+    }
     panelApplies(step);
   }
 
-  const followed = (): string | null => (panel ? followedIdOf(panel.following) : null);
-  const rows = (): string[] => panel?.following.sources.map((s) => s.id) ?? [];
+  const followed = (): string | null => (panel ? followedIdOf(panel.side.following) : null);
+  const known = (): string[] => panel?.side.following.sources.map((s) => s.id) ?? [];
+  const rows = (): string[] => (panel ? listedSources(panel.side.following).map((s) => s.id) : []);
   const alive = (): Tab[] => tabs.filter((t) => t.alive);
   const tab = (id: string): Tab => tabs.find((t) => t.id === id)!;
 
   function check(): void {
     const f = followed();
-    if (f && !rows().includes(f)) throw new Error(`the panel follows ${f}, which is not listed`);
+    if (f && !known().includes(f)) throw new Error(`the panel follows ${f}, which is not listed`);
     for (const t of tabs) {
       if (t.link.mode === 'following' && !t.askedByName)
         throw new Error(`${t.id} follows without being asked by name`);
@@ -182,30 +218,35 @@ export function simulate(options: SimOptions = {}) {
     }
   }
 
-  function connectTab(url: string): Tab {
+  function connectTab(url: string, slot: Slot): Tab {
     const t: Tab = {
       id: `t${++loads}`,
+      slot,
       url,
-      link: { mode: 'quiet' },
+      link: { mode: 'ended' },
       sent: 0,
       value: 0,
       commit: 0,
       watching: false,
       askedByName: false,
       alive: true,
+      diedQuiet: false,
     };
     tabs.push(t);
     up.set(t.id, []);
     down.set(t.id, []);
-    const start = startLink({ url, title: url });
+    const start = startLink(page(t), slot.key);
     t.link = start.link;
     start.effects.forEach((effect) => perform(t, effect));
     return t;
   }
 
+  // A page that goes says bye, if a panel had spoken to it, and is gone.
   function die(t: Tab): void {
-    t.alive = false;
+    t.diedQuiet = t.link.mode === 'quiet';
+    linkHears(t, { type: 'pagehide' });
     linkHears(t, { type: 'disconnect' });
+    t.alive = false;
     down.set(t.id, []);
   }
 
@@ -222,7 +263,9 @@ export function simulate(options: SimOptions = {}) {
     const { from, to } = all[pick % all.length];
     if (to === 'panel') {
       const msg = up.get(from)!.shift()!;
-      act(`  ${from} → panel: ${msg.kind} n${msg.n}`, () => panelHears(msg));
+      act(`  ${from} → panel: ${msg.kind} n${msg.n}`, () =>
+        panelHearsStep(panelHeard(panel!.side, msg, clock)),
+      );
     } else {
       const msg = down.get(to.id)!.shift()!;
       act(`  panel → ${to.id}: ${msg.kind}${msg.to ? ` to ${msg.to}` : ''}`, () =>
@@ -232,12 +275,23 @@ export function simulate(options: SimOptions = {}) {
     return true;
   }
 
+  /** Moves the clock on by `ms`, running every timer that comes due on the way. */
+  function tick(ms: number): void {
+    const until = clock + ms;
+    while (timers.length && timers[0].at <= until) {
+      const timer = timers.shift()!;
+      clock = timer.at;
+      act(`${timer.what} (at ${clock})`, timer.run);
+    }
+    clock = until;
+  }
+
   const api = {
     log,
     gaps,
     open(url = '/'): string {
       let id = '';
-      act(`open ${url}`, () => (id = connectTab(url).id));
+      act(`open ${url}`, () => (id = connectTab(url, { key: null }).id));
       return id;
     },
     openPanel(opts: { rememberedUrl?: string; waitForUrl?: boolean } = {}): void {
@@ -246,7 +300,10 @@ export function simulate(options: SimOptions = {}) {
           rememberedUrl: opts.rememberedUrl ?? null,
           waitForUrl: opts.waitForUrl ?? false,
         });
-        panel = { following: start.state, numbers: new Map(), repairs: new Map(), held: EMPTY };
+        panel = {
+          side: { following: start.state, numbers: new Map(), repair: null },
+          held: EMPTY,
+        };
         panelSends(start.send);
       });
     },
@@ -263,16 +320,16 @@ export function simulate(options: SimOptions = {}) {
       const t = tab(id);
       act(`navigate ${id} to ${url}`, () => {
         t.url = url;
-        linkHears(t, { type: 'page', page: { url, title: url } });
+        linkHears(t, { type: 'page', page: page(t) });
       });
     },
-    /** A new page load in the same tab: a new id, the same url. */
+    /** A new page load in the same tab: a new id, the same url and sessionStorage. */
     reload(id: string): string {
       const old = tab(id);
       let next = '';
       act(`reload ${id}`, () => {
         die(old);
-        next = connectTab(old.url).id;
+        next = connectTab(old.url, old.slot).id;
       });
       return next;
     },
@@ -280,16 +337,17 @@ export function simulate(options: SimOptions = {}) {
       act(`close ${id}`, () => die(tab(id)));
     },
     pick(id: string): void {
-      act(`pick ${id}`, () =>
-        panelApplies(follow(panel!.following, { type: 'pick', id }, ++clock)),
-      );
+      act(`pick ${id}`, () => panelHearsStep(panelStep(panel!.side, { type: 'pick', id }, clock)));
     },
     deliver,
-    /** Delivers until nothing is in flight. */
+    tick,
+    /** Delivers until nothing is in flight, and lets every timer come due. */
     settle(): void {
       for (let i = 0; i < 10_000; i++) {
         forever?.();
-        if (!deliver()) return;
+        if (deliver()) continue;
+        if (!timers.length) return;
+        tick(timers[0].at - clock);
       }
       throw new Error(`the simulation never settled\n${log.slice(-40).join('\n')}`);
     },
@@ -298,18 +356,22 @@ export function simulate(options: SimOptions = {}) {
     /** Stops losing messages, has the followed page change once so a lost last message shows, and settles. */
     heal(): void {
       loss = 0;
+      lossDown = 0;
       api.settle();
       const f = followed();
       if (f && tab(f).alive) api.change(f);
       api.settle();
     },
-    /** After settling: one row per tab that lives, and none for a tab that went. */
+    /**
+     * After settling with nothing lost: one row per tab that lives, and none for a tab that went
+     * after a panel spoke to it. A tab that went before a panel spoke to it said no bye, and stays.
+     */
     rowsMatchTabs(): string | null {
       const listed = new Set(rows());
       const missing = alive().filter((t) => !listed.has(t.id));
-      const stale = [...listed].filter((id) => !tab(id).alive);
+      const stale = [...listed].filter((id) => !tab(id).alive && !tab(id).diedQuiet);
       if (!missing.length && !stale.length) return null;
-      return `missing ${missing.map((t) => t.id).join(',')}; stale ${stale.join(',')}`;
+      return `missing ${missing.map((t) => t.id).join(',')}; stale ${stale.join(',')}\n${log.join('\n')}`;
     },
     get followed() {
       return followed();
@@ -323,6 +385,8 @@ export function simulate(options: SimOptions = {}) {
     },
     value: (id: string) => tab(id).value,
     mode: (id: string) => tab(id).link.mode,
+    /** The next `count` messages the panel sends are lost on the way. */
+    loseFromPanel: (count = 1) => void (loseFromPanel = count),
     /** The next message this tab sends is lost on the way. */
     loseNext: (id: string) => void loseNext.add(id),
     alive: (id: string) => tab(id).alive,
