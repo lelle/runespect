@@ -35,9 +35,9 @@
   import CommitDetail from './CommitDetail.svelte';
   import { panelStatus } from './status';
   import { lastSeenLabel, sourceDetails, sourceLabel } from './sources';
-  import { startFollowing, follow, followedIdOf, type FollowStep } from './follow';
+  import { startFollowing, follow, followedIdOf, listedSources, type FollowStep } from './follow';
   import type { Gap, Numbers } from './numbering';
-  import { panelHeard } from './panel-step';
+  import { panelHeard, panelStep, repairDue, type HeardStep, type Repair } from './panel-step';
   import { EMPTY, hold, shown, type Held } from './held';
   import Tree from './Tree.svelte';
   import Detail from './Detail.svelte';
@@ -59,6 +59,7 @@
     initialSourceUrl,
     onError,
     onGap,
+    oneTab = false,
   }: {
     transport: Transport;
     buildInfo?: BuildInfo;
@@ -72,6 +73,11 @@
     onError?: (pane: string, error: unknown) => void;
     /** A page skipped a number: a message from it was lost on the way. The extension records it. */
     onGap?: (gap: Gap) => void;
+    /**
+     * Hears one tab only, as the extension's panel does (its background routes by tab): a page in
+     * it that replaces the page followed is its reload, followed at once.
+     */
+    oneTab?: boolean;
   } = $props();
   // Raw: every step replaces the held tree, never edits it in place, so deep proxies would only cost
   // a signal per node and value.
@@ -119,9 +125,10 @@
       initialSourceUrl ??
       loadSetting<string | null>('sourceUrl', null, (v) => typeof v === 'string'),
     waitForUrl: initialSourceUrl != null,
+    oneTab,
   });
   let following = $state.raw(start.state);
-  let sources = $derived(following.sources);
+  let sources = $derived(listedSources(following));
   let followedId = $derived(followedIdOf(following));
   let followed = $derived(sources.find((s) => s.id === followedId) ?? null);
   let sourcesOpen = $state(false);
@@ -149,7 +156,28 @@
     if (step.switched) forgetPage();
     for (const message of step.send) transport.send(message);
     if (step.deliver) show(step.deliver);
+    for (const { id, at } of step.timers)
+      later(at, () =>
+        applyHeard(panelStep({ following, numbers, repair }, { type: 'timeout', id }, Date.now())),
+      );
   }
+
+  // A page that said bye is kept for a wait; follow.ts says when it ends, the view keeps the time.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- non-reactive bookkeeping
+  const pending = new Set<ReturnType<typeof setTimeout>>();
+  function later(at: number, run: () => void): void {
+    const handle = setTimeout(
+      () => {
+        pending.delete(handle);
+        // Early by the clock (it stepped back, or the timer ran a little early): not due yet.
+        if (Date.now() < at) later(at, run);
+        else run();
+      },
+      Math.max(0, at - Date.now()),
+    );
+    pending.add(handle);
+  }
+  $effect(() => () => pending.forEach(clearTimeout));
 
   // Every command goes to the page we follow, addressed by follow.ts.
   function send(message: ToPageMessage): void {
@@ -169,7 +197,7 @@
 
   function pickSource(id: string): void {
     sourcesOpen = false;
-    apply(follow(following, { type: 'pick', id }, Date.now()));
+    applyHeard(panelStep({ following, numbers, repair }, { type: 'pick', id }, Date.now()));
   }
 
   // ── which source is feeding us ──
@@ -234,20 +262,25 @@
   }
 
   // ── messages lost on the way ──
-  // Not state: nothing on screen shows it. Reports go to onGap and not to a console: the panel can
-  // run in the inspected page.
+  // Not state: nothing on screen shows it.
   let numbers: Numbers = new Map();
-  let repairs: ReadonlyMap<string, number> = new Map();
+  let repair: Repair | null = null;
 
+  function applyHeard(step: HeardStep): void {
+    numbers = step.side.numbers;
+    repair = step.side.repair;
+    // To onGap and not to a console: the panel can run in the inspected page.
+    if (step.gap) onGap?.(step.gap);
+    if (step.repairAt !== null) {
+      later(step.repairAt, () => applyHeard(repairDue({ following, numbers, repair }, Date.now())));
+    }
+    apply(step);
+  }
   $effect(() => {
     const off = transport.onMessage?.((msg) => {
       if (!isRunespectMessage(msg)) return;
       if (!isToPanel(msg)) return; // panel only handles agent→panel kinds (compiler-enforced)
-      const step = panelHeard(following, numbers, repairs, msg, Date.now());
-      numbers = step.numbers;
-      repairs = step.repairs;
-      if (step.gap) onGap?.(step.gap);
-      apply(step);
+      applyHeard(panelHeard({ following, numbers, repair }, msg, Date.now()));
     });
     return off;
   });
@@ -382,7 +415,7 @@
               aria-expanded={sourcesOpen}
               title="Choose which page to follow"
               onclick={() => (sourcesOpen = !sourcesOpen)}
-              >{sourceLabel(followed)} · {sources.length} pages heard ▾</button
+              >{sourceLabel(followed)} · {sources.length} pages ▾</button
             >
           {:else}
             <span class="source" data-testid="runespect-source">{sourceLabel(followed)}</span>
@@ -405,8 +438,10 @@
               >
                 <span class="mark">{source.id === followedId ? '●' : '○'}</span>
                 <span class="label">{sourceLabel(source)}</span>
-                <!-- An age, not a verdict: a quiet page and a closed one look the same here. -->
-                <span class="seen">{lastSeenLabel(source, now)}</span>
+                <!-- A page that said bye is listed only while it is followed: it may be reloading. -->
+                <span class="seen"
+                  >{source.life.state === 'left' ? 'reloading…' : lastSeenLabel(source, now)}</span
+                >
                 <!-- Two tabs on one route share a url: the details tell them apart. -->
                 <span class="details">{sourceDetails(source)}</span>
               </button>

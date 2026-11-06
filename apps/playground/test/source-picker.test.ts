@@ -1,4 +1,4 @@
-import { test, expect, beforeEach } from 'vitest';
+import { test, expect, beforeEach, vi } from 'vitest';
 import { flushSync } from 'svelte';
 import { helloMessage, treeMessage, PROTOCOL_VERSION } from '@runespect/agent/protocol/internal';
 import type { Message, SerializedNode } from '@runespect/agent/protocol/internal';
@@ -64,7 +64,7 @@ test('several sources: the chip counts the pages, and each row of the list says 
   emit(hello('b', '/checkout', 'Shop', '0.2.0'));
   emit(hello('c', '/', 'Shop', '0.1.1'));
 
-  expect(source(target).textContent!.trim()).toBe('/checkout · 3 pages heard ▾');
+  expect(source(target).textContent!.trim()).toBe('/checkout · 3 pages ▾');
   source(target).click();
   flushSync();
   const rows = [...picker(target)!.querySelectorAll('button')].map((row) => ({
@@ -72,10 +72,10 @@ test('several sources: the chip counts the pages, and each row of the list says 
     details: row.querySelector('.details')!.textContent,
     current: row.classList.contains('current'),
   }));
-  // Of two pages on one url the panel follows the one it heard from last, as it does today.
+  // Of two pages on one url the panel keeps to the first: the second is another tab.
   expect(rows).toEqual([
-    { url: '/checkout', details: 'Shop · Live · v0.2.0', current: false },
     { url: '/checkout', details: 'Shop · Live · v0.2.0', current: true },
+    { url: '/checkout', details: 'Shop · Live · v0.2.0', current: false },
     { url: '/', details: 'Shop · Live · v0.1.1', current: false },
   ]);
 });
@@ -103,22 +103,23 @@ test('a panel opened for a url keeps following its page when the page navigates'
   expect(target.querySelector('[data-select="CartPage"]')).toBeTruthy();
 });
 
-// Pages say hello on their own when they navigate or retitle. One the panel already knows must not
-// take it away from the page it follows; a new page at that url (a reload) still does, as before.
-test('a known page that says hello again does not take the panel from the page it follows', () => {
+// Pages say hello on their own when they navigate or retitle, and another tab can open at the url.
+// Neither takes the panel from the page it follows; a reload of that page does.
+test('another page at the url does not take the panel from the page it follows, a reload does', () => {
   const { target, emit } = panelWith('/checkout');
   emit(hello('a', '/checkout', 'Shop'));
+  emit({ ...treeMessage([node('FromA')]), from: 'a' } as Message);
   emit(hello('b', '/checkout', 'Shop'));
-  emit({ ...treeMessage([node('FromB')]), from: 'b' } as Message);
-
   emit(hello('a', '/checkout', '(1) Shop'));
+  emit({ ...treeMessage([node('FromB')]), from: 'b' } as Message);
   flushSync();
-  expect(target.querySelector('[data-select="FromB"]')).toBeTruthy();
+  expect(target.querySelector('[data-select="FromA"]')).toBeTruthy();
 
-  emit(hello('c', '/checkout', 'Shop'));
-  emit({ ...treeMessage([node('FromC')]), from: 'c' } as Message);
+  emit({ source: 'runespect', kind: 'bye', from: 'a' } as Message);
+  emit({ ...hello('a2', '/checkout', 'Shop'), replaces: 'a' } as Message);
+  emit({ ...treeMessage([node('FromA2')]), from: 'a2' } as Message);
   flushSync();
-  expect(target.querySelector('[data-select="FromC"]')).toBeTruthy();
+  expect(target.querySelector('[data-select="FromA2"]')).toBeTruthy();
 });
 
 test('switching source switches the tree', () => {
@@ -151,4 +152,27 @@ test('the chosen url is remembered, so a reload lands on the same app', () => {
   second.emit(hello('b2', '/admin'));
 
   expect(source(second.target).textContent).toContain('/admin');
+});
+
+// A timer can come early by the wall clock (the clock stepped back, or setTimeout ran a little
+// early). The wait it was for is then not over yet, so it is set again rather than lost.
+test('a wait whose timer comes early by the clock still ends', () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+  try {
+    const { target, emit } = panelWith();
+    emit(hello('a', '/cart'));
+    emit(hello('b', '/admin'));
+    emit({ source: 'runespect', kind: 'bye', from: 'a' } as Message);
+
+    vi.setSystemTime(Date.now() - 500);
+    vi.advanceTimersByTime(1000);
+    flushSync();
+    expect(source(target).textContent).toContain('/cart');
+
+    vi.advanceTimersByTime(1000);
+    emit(hello('b', '/admin')); // its answer to the panel asking it by name
+    expect(source(target).textContent).toContain('/admin');
+  } finally {
+    vi.useRealTimers();
+  }
 });

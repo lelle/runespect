@@ -115,13 +115,13 @@ test('a url remembered from last time falls back to the first page heard', () =>
   expect(followedIdOf(p.state)).toBe('a');
 });
 
-// A reloaded page announces itself under a new id at the same url, and the dead one stays listed: a
-// quiet page and a closed one look the same.
+// A reloaded page says bye, and the page after it in the tab says which page it replaces.
 test('a reload of the followed page moves the panel to the reloaded page', () => {
   const p = panel();
   p.hear(hello('before-reload', '/cart'));
   p.hear(hello('other-tab', '/admin'));
-  const step = p.hear(hello('after-reload', '/cart'));
+  p.hear({ source: 'runespect', kind: 'bye', from: 'before-reload' });
+  const step = p.hear(hello('after-reload', '/cart', { replaces: 'before-reload' }));
 
   expect(followedIdOf(p.state)).toBe('after-reload');
   expect(step.switched).toBe(true);
@@ -134,7 +134,8 @@ test('a reload of the followed page moves the panel to the reloaded page', () =>
 test('a reload of the remembered page moves the panel to the reloaded page', () => {
   const p = panel({ rememberedUrl: '/cart' });
   p.hear(hello('before-reload', '/cart'));
-  p.hear(hello('after-reload', '/cart'));
+  p.hear({ source: 'runespect', kind: 'bye', from: 'before-reload' });
+  p.hear(hello('after-reload', '/cart', { replaces: 'before-reload' }));
 
   expect(followedIdOf(p.state)).toBe('after-reload');
 });
@@ -165,7 +166,7 @@ test('a picked page stays followed while the others speak or reload', () => {
   expect(followedIdOf(p.state)).toBe('b');
 });
 
-test('picking the page already followed changes nothing', () => {
+test('picking the page already followed asks nothing, and makes it a pick', () => {
   const p = panel();
   p.hear(hello('a', '/cart'));
   p.hear(hello('b', '/admin'));
@@ -173,7 +174,8 @@ test('picking the page already followed changes nothing', () => {
 
   expect(step.switched).toBe(false);
   expect(step.send).toEqual([]);
-  expect(p.state.rememberedUrl).toBeNull();
+  expect(p.state.focus).toEqual({ kind: 'following', id: 'a', why: 'picked' });
+  expect(p.state.rememberedUrl).toBe('/cart');
 });
 
 // A page reads nothing until a panel asks it by name, so following another page while the one the
@@ -187,7 +189,10 @@ test('a panel opened for a page asks no other page, and shows nothing, while it 
   ];
 
   expect(followedIdOf(p.state)).toBeNull();
-  expect(steps.flatMap((s) => s.send)).toEqual([]);
+  // A ping makes a page say hello as it changes, without reading the app or sending a tree.
+  expect(steps.flatMap((s) => s.send)).toEqual([
+    expect.objectContaining({ kind: 'ping', to: 'a' }),
+  ]);
   expect(steps.map((s) => s.deliver)).toEqual([null, null, null]);
 });
 
@@ -281,14 +286,13 @@ test('a page that says hello without a url is followed by its id', () => {
   expect(followedIdOf(p.state)).toBe('no-url');
 });
 
-// Two pages at one url: the newest one is followed (a reload is a new page). A page the panel
-// already knows saying hello again, as pages do when they navigate or retitle, does not take over.
-test('of two pages at one url, the panel follows the newest, and keeps to it', () => {
+// Two pages at one url: a reload says which page it replaces, so a page that does not is another
+// tab, and does not take the panel from the page it follows.
+test('of two pages at one url, the panel keeps to the first', () => {
   const p = panel();
   p.hear(hello('first', '/cart'));
   p.hear(hello('second', '/cart'));
-  expect(followedIdOf(p.state)).toBe('second');
-
   p.hear(hello('first', '/cart'));
-  expect(followedIdOf(p.state)).toBe('second');
+
+  expect(followedIdOf(p.state)).toBe('first');
 });

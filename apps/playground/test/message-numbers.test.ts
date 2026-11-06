@@ -5,6 +5,7 @@ import {
   helloMessage,
   treeMessage,
   opsMessage,
+  historyMessage,
   PROTOCOL_VERSION,
   type Message,
   type ToPanelMessage,
@@ -190,8 +191,8 @@ test('a message that stands on its own is applied even when it shows a gap', () 
 });
 
 // A tree the transport always refuses uses up its number each time: each answer would show a new
-// gap, and asking again for each would never end. A tree only lost on the way needs another ask.
-test('gaps from the page it follows ask for its tree at most three times, until a tree comes', () => {
+// gap, and asking again for each would never end. The panel asks again by a deadline instead.
+test('gaps from the page it follows while it waits for its tree and history ask nothing more, until they come', () => {
   const p = panel();
   p.emit(hello('a', 1));
   p.emit(tree('a', 2));
@@ -200,11 +201,12 @@ test('gaps from the page it follows ask for its tree at most three times, until 
   for (let n = 4; n <= 12; n += 2) p.emit(ops('a', n, n, n));
 
   expect(p.gaps).toHaveLength(5);
-  expect(asked(p.sent.slice(before)).filter((k) => k === 'request a')).toHaveLength(3);
+  expect(asked(p.sent.slice(before)).filter((k) => k === 'request a')).toHaveLength(1);
 
   p.emit(tree('a', 13));
-  p.emit(ops('a', 15, 15, 15));
-  expect(asked(p.sent.slice(before)).filter((k) => k === 'request a')).toHaveLength(4);
+  p.emit({ ...historyMessage([], false), from: 'a', n: 14 } as Message);
+  p.emit(ops('a', 16, 16, 16));
+  expect(asked(p.sent.slice(before)).filter((k) => k === 'request a')).toHaveLength(2);
 });
 
 test('a gap from a page it does not follow is reported, and nothing is sent', () => {

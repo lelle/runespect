@@ -256,13 +256,13 @@ Details worth knowing:
   panel therefore follows exactly one _source_, and says which one.
   - Each page announces `{ id, url, title }` in its `hello` and stamps `from` on everything it
     sends. `id` is new per page load, because a reload is a new agent with a new tree.
-  - The panel keeps every source it has heard from, and follows: the explicit choice → the url it
-    followed last (a reload changes the id, the url survives) → the first heard. `ui/follow.ts`
-    holds the whole rule as one pure step per message heard, pick or command: which page is
-    followed, what is shown, what is sent, and when the panel drops what it holds.
+  - A page a panel has spoken to says `bye` when it goes, and the next page in its tab names it in
+    `replaces` (kept in the tab's `sessionStorage`). `ui/sources.ts` holds whether each page is
+    there (alive, left and maybe reloading, or replaced and pinged); `ui/follow.ts` reacts only to
+    what that did (arrived, replaced, gone, …) and holds the page followed: the explicit choice →
+    the url it followed last → a tab that is shown → the first heard. It keeps to that page while it
+    is there. Waits are deadlines in the state, and the view sets the timers.
   - The status chip names the followed page, and becomes a picker when there is more than one.
-    Sources show a _last seen_ age rather than a live/dead verdict: on a shared bus a quiet page and
-    a closed one are indistinguishable, and guessing would switch you away mid-debugging.
   - Filtering is panel-side, not transport-side, on purpose: a transport that bound to one peer
     would hide the other pages before the panel could offer them.
   - Commands are **addressed**: the panel stamps `to` with the page it follows, and a page ignores

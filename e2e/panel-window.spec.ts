@@ -168,6 +168,50 @@ test('an edit reaches only the page the panel follows', async ({ context }) => {
   await expect(other.locator('#app button', { hasText: '77 / 154' })).toHaveCount(0);
 });
 
+// A reload is a new page in the same tab: it says which page it replaces, so the panel stays with
+// that tab. Another tab opening at the same url afterwards does not take the panel (before, the
+// page heard from last at a url won).
+test('a reloaded tab keeps the panel, and a tab opened later at its url does not take it', async ({
+  context,
+}) => {
+  const tab = await context.newPage();
+  await tab.goto('/?case=reload');
+  const panel = await context.newPage();
+  await panel.goto('/__runespect/?source=/?case=reload');
+  await expect(panel.locator('[data-select="Counter"]').first()).toBeVisible();
+
+  await tab.reload();
+  await expect(panel.locator('[data-select="Counter"]').first()).toBeVisible();
+  const other = await context.newPage();
+  await other.goto('/?case=reload');
+  await expect(panel.locator('button[data-testid="runespect-source"]')).toBeVisible();
+  await panel.locator('[data-select="Counter"]').first().click();
+  const edit = panel.locator('[data-detail-edit="Counter.count"]').first();
+  await edit.fill('55');
+  await edit.dispatchEvent('input');
+
+  await expect(tab.locator('#app button', { hasText: '55 / 110' }).first()).toBeVisible();
+  await expect(other.locator('#app button', { hasText: '55 / 110' })).toHaveCount(0);
+});
+
+test('a closed tab leaves the list', async ({ context }) => {
+  const kept = await context.newPage();
+  await kept.goto('/?case=close-kept');
+  const closed = await context.newPage();
+  await closed.goto('/?case=close-gone');
+  const panel = await context.newPage();
+  await panel.goto('/__runespect/?source=/?case=close-kept');
+  const source = panel.locator('[data-testid="runespect-source"]');
+  await expect(panel.locator('button[data-testid="runespect-source"]')).toBeVisible();
+  await source.click();
+  const picker = panel.locator('[data-testid="runespect-sources"]');
+  await expect(picker.locator('button', { hasText: 'close-gone' })).toHaveCount(1);
+
+  await closed.close();
+
+  await expect(picker.locator('button', { hasText: 'close-gone' })).toHaveCount(0);
+});
+
 // An app that navigates on the client stays the same page; the panel follows it to its new url, and
 // keeps showing its tree.
 test('a page that navigates on the client is followed to its new url', async ({ context }) => {
