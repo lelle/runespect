@@ -85,11 +85,13 @@ export function connect(transport: Transport): () => void {
   // uncaught error in the inspected app's own console. Report it once per connection and keep
   // going: the next update may well be fine.
   let warnedUnsendable = false;
+  // Taken before the transport is called, so a send it refuses leaves a gap the panel can see.
+  let sentCount = 0;
   // Typed to the direction the agent actually sends, which is also what carries `from`.
   const send = (message: ToPanelMessage): void => {
     try {
       // Stamped with who we are so a panel hearing several pages can keep to the one it follows.
-      transport.send({ ...message, from: SOURCE_ID });
+      transport.send({ ...message, from: SOURCE_ID, n: ++sentCount });
       record('tx', { kind: message.kind, ...sizeOf(message) });
     } catch (e) {
       record('drop', { kind: message.kind, error: String(e) });

@@ -17,6 +17,7 @@ structured clone, so nothing else crosses: values JSON cannot hold are encoded (
 | `source`   | every message       | always `'runespect'`; how a listener on a shared channel finds ours              |
 | `kind`     | every message       | which message it is                                                              |
 | `from`     | page to panel       | the page's id, new on every page load; stamped by the agent on all it sends      |
+| `n`        | page to panel       | one more than the last message this connection sent, from 1                      |
 | `to`       | panel to page       | the page a command is meant for; a page drops a command addressed to another     |
 | `__rsFrom` | window and HMR only | the sending transport's own tag, so it can drop the copy the channel echoes back |
 
@@ -28,6 +29,15 @@ neither list.
 A message without `from` is from a page that has no agent: the extension's Names only walk or the capture
 capture (see [Other senders](#other-senders)). A command without `to` is for whoever hears it, which
 is what the extension relies on: its service worker already routes by tab.
+
+The panel keeps the last `n` per `from`, starting at the first it hears. A number skipped, or one
+heard before, means a message was lost or came out of order on the way: the panel records a `gap`
+(see [the event log](event-log.md)); the panel window also warns once per page in its console. A
+message heard before is dropped. A number skipped in the page the panel follows asks that page
+again with `request` and `history-request` (since 0), so the tree and the history match the page
+whatever was lost, up to three times until its tree comes; an `ops` that shows the gap is not applied, since it
+builds on what came before, while a message that stands on its own is. A page that connects again
+counts from 1.
 
 ## Sequences
 

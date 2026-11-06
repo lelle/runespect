@@ -14,6 +14,8 @@
     logMessage,
     storeGlobalMessage,
     inspectMessage,
+    requestMessage,
+    historyRequestMessage,
     PROTOCOL_VERSION,
     type Transport,
     type SerializedNode,
@@ -36,6 +38,7 @@
   import { panelStatus } from './status';
   import { lastSeenLabel, sourceDetails, sourceLabel } from './sources';
   import { startFollowing, follow, followedIdOf, type FollowStep } from './follow';
+  import { hearNumber, REPAIR_ATTEMPTS, type Gap, type Numbers } from './numbering';
   import { EMPTY, hold, shown, type Held } from './held';
   import Tree from './Tree.svelte';
   import Detail from './Detail.svelte';
@@ -56,6 +59,7 @@
     buildInfo,
     initialSourceUrl,
     onError,
+    onGap,
   }: {
     transport: Transport;
     buildInfo?: BuildInfo;
@@ -67,6 +71,8 @@
     initialSourceUrl?: string;
     /** A pane failed to render; the extension records it in the hop log, so dump() has it. */
     onError?: (pane: string, error: unknown) => void;
+    /** A page skipped a number: a message from it was lost on the way. The extension records it. */
+    onGap?: (gap: Gap) => void;
   } = $props();
   // Raw: every step replaces the held tree, never edits it in place, so deep proxies would only cost
   // a signal per node and value.
@@ -228,10 +234,42 @@
     }
   }
 
+  // ── messages lost on the way ──
+  // Not state: nothing on screen shows it.
+  let numbers: Numbers = new Map();
+  // How often each page was asked for its tree after a gap, since its last tree. A tree the
+  // transport always refuses uses up its number each time, so asking on every gap would never end;
+  // a tree that was only lost on the way needs another ask.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- non-reactive bookkeeping
+  const repairs = new Map<string, number>();
+
+  // A gap from the page we follow means the tree we hold may be wrong, whatever was lost: the page is
+  // asked for its tree and its whole history again. Only ops build on what came before, so they are
+  // not applied; a tree, a picked or a hydrate stands on its own. A message older than what we have
+  // is dropped, with nothing to ask. Reports go to onGap and not to a console: the panel can run in
+  // the inspected page.
+  function heardNumbered(msg: ToPanelMessage): boolean {
+    const step = hearNumber(numbers, msg);
+    numbers = step.numbers;
+    if (msg.kind === 'tree' && msg.from) repairs.delete(msg.from);
+    if (!step.gap) return true;
+    onGap?.(step.gap);
+    if (step.stale) return false;
+    if (step.gap.from !== followedId) return true;
+    const asked = repairs.get(step.gap.from) ?? 0;
+    if (asked < REPAIR_ATTEMPTS) {
+      repairs.set(step.gap.from, asked + 1);
+      send(requestMessage());
+      send(historyRequestMessage(0));
+    }
+    return msg.kind !== 'ops';
+  }
+
   $effect(() => {
     const off = transport.onMessage?.((msg) => {
       if (!isRunespectMessage(msg)) return;
       if (!isToPanel(msg)) return; // panel only handles agent→panel kinds (compiler-enforced)
+      if (!heardNumbered(msg)) return;
       apply(follow(following, { type: 'heard', msg }, Date.now()));
     });
     return off;

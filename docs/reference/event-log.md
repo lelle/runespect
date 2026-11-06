@@ -32,7 +32,7 @@ flowchart TB
 | `relay`      | what it forwards in each direction                                     |
 | `background` | sends to a tab it could not deliver                                    |
 | `panel-port` | connect, disconnect, reconnect, messages received                      |
-| `panel`      | messages the panel received, panes that failed                         |
+| `panel`      | messages the panel received, panes that failed, gaps in a page's `n`   |
 
 The relay cannot reach `window.__runespect` from the isolated world, and the panel cannot reach the
 page at all, so both post their buffers inward: the relay via `window.postMessage` with
@@ -51,15 +51,16 @@ for every hop (`packages/extension/src/mirror.ts`).
 { t: 1787224653428, seq: 41, hop: 'relay', ev: 'tx', kind: 'tree', nodes: 44 }
 ```
 
-| field   | meaning                                                                        |
-| ------- | ------------------------------------------------------------------------------ |
-| `t`     | wall-clock ms — how hops merge into one timeline                               |
-| `seq`   | per-hop counter; a gap means the window dropped it, not that it never happened |
-| `hop`   | where it happened                                                              |
-| `ev`    | `tx` `rx` `connect` `reconnect` `disconnect` `drop` `refused` `tier` `error`   |
-| `kind`  | the protocol message kind, for `tx`/`rx`                                       |
-| `error` | why, on a `drop`; the message, on an `error`                                   |
-| `pane`  | which pane failed to render, on an `error`                                     |
+| field   | meaning                                                                            |
+| ------- | ---------------------------------------------------------------------------------- |
+| `t`     | wall-clock ms — how hops merge into one timeline                                   |
+| `seq`   | per-hop counter; a gap means the window dropped it, not that it never happened     |
+| `hop`   | where it happened                                                                  |
+| `ev`    | `tx` `rx` `connect` `reconnect` `disconnect` `drop` `refused` `tier` `error` `gap` |
+| `kind`  | the protocol message kind, for `tx`/`rx`                                           |
+| `error` | why, on a `drop`; the message, on an `error`                                       |
+| `pane`  | which pane failed to render, on an `error`                                         |
+| `from`  | the page whose numbers skipped, on a `gap`, with `expected` and `got`              |
 
 **Envelopes only.** Kinds, counts, sizes and lifecycle — never the app's values. The log is pasted
 into bug reports with `dump()`, so it must not carry application state. The same global also reads

@@ -6,6 +6,7 @@ import {
   type Message,
   type Transport,
 } from '@runespect/agent/protocol/internal';
+import type { Gap } from '@runespect/ui/internal';
 import { createMirror } from './mirror.js';
 import { reconnectingPort, type ReconnectingPortOptions } from './panel-port.js';
 
@@ -26,6 +27,7 @@ export interface PanelHopOptions extends ReconnectingPortOptions {
 export function startPanel({ evalInPage, schedule, ...port }: PanelHopOptions): {
   transport: Transport & { close: () => void };
   onError: (pane: string, error: unknown) => void;
+  onGap: (gap: Gap) => void;
 } {
   const transport = reconnectingPort(port);
   // The whole log each time: the inspected page can reload while the panel stays open. After an
@@ -48,5 +50,6 @@ export function startPanel({ evalInPage, schedule, ...port }: PanelHopOptions): 
     transport,
     onError: (pane, error) =>
       void events.record('error', { pane, error: errorValue(error).message }),
+    onGap: (gap) => void events.record('gap', { ...gap }),
   };
 }
