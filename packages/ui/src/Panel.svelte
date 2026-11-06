@@ -553,6 +553,7 @@
               {openInEditor}
               {onOpen}
               expandValues={prefs.expandValues}
+              flash={prefs.flash}
               {onEdit}
               {onCopy}
               {onStoreGlobal}

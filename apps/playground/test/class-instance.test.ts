@@ -11,6 +11,7 @@ import {
 import { Detail, Inspect, formatValue, entriesOf } from '@runespect/ui/internal';
 import { instrumented, instrumentedModule } from './helpers/instrumented';
 import { openPanel } from './helpers/agent';
+import { openAllValues } from './helpers/overlay';
 
 beforeEach(() => agent.reset());
 
@@ -141,6 +142,7 @@ test('the in-page overlay can expand a class instance', () => {
   mount(Inspect, { target: overlay });
   flushSync();
   const shadow = overlay.querySelector('[data-testid="runespect-overlay-host"]')!.shadowRoot!;
+  openAllValues(shadow);
 
   const value = shadow.querySelector('[data-value="Svc.auth"]') as HTMLElement;
   (value.querySelector('[data-expand]') as HTMLButtonElement).click();
@@ -158,6 +160,7 @@ test('expanding a class instance in the overlay does not flash it', () => {
   mount(Inspect, { target: overlay });
   flushSync();
   const shadow = overlay.querySelector('[data-testid="runespect-overlay-host"]')!.shadowRoot!;
+  openAllValues(shadow);
 
   (shadow.querySelector('[data-value="Svc.auth"] [data-expand]') as HTMLButtonElement).click();
   flushSync();

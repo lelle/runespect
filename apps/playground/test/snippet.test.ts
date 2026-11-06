@@ -5,6 +5,7 @@ import { Inspect } from '@runespect/ui/internal';
 import List from '../src/List.svelte';
 import CardHost from '../src/CardHost.svelte';
 import { svelteAtLeast } from './svelte-version';
+import { openAllValues } from './helpers/overlay';
 
 beforeEach(() => {
   agent.reset();
@@ -44,6 +45,7 @@ test('overlay lists declared snippets and renders a snippet prop as a function',
   mount(Inspect, { target: overlay });
   flushSync();
   const shadow = overlay.querySelector('[data-testid="runespect-overlay-host"]')!.shadowRoot!;
+  openAllValues(shadow);
 
   expect(shadow.querySelector('[data-snippet="List.row"]')).toBeTruthy();
 

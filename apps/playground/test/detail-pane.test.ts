@@ -123,6 +123,21 @@ test('Detail: a changed value flashes (highlight-updates in the panel)', async (
   expect(labelCell.classList.contains('rs-flash')).toBe(false); // unchanged → no flash
 });
 
+test('Detail with flashing turned off leaves a changed value calm', async () => {
+  const { tick } = await import('svelte');
+  const { render } = await import('@testing-library/svelte');
+  const mk = (count: number): SerializedNode => ({
+    ...counter,
+    values: { ...counter.values, count },
+  });
+  const { container, rerender } = render(Detail, { node: mk(1), flash: false });
+
+  await rerender({ node: mk(2), flash: false });
+  await tick();
+
+  expect(container.querySelector('.rs-flash')).toBeNull();
+});
+
 test('Detail with no selected node shows a placeholder', () => {
   const target = mountInto(Detail, { node: null });
   expect(target.querySelector('[data-detail-empty]')).toBeTruthy();

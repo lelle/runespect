@@ -1,20 +1,15 @@
 import { test, expect, beforeEach, vi } from 'vitest';
 import { mount, flushSync } from 'svelte';
 import * as agent from '@runespect/agent/internal';
-import App from '../src/App.svelte';
 import { Inspect } from '@runespect/ui/internal';
+import { mountOverlay, openAllValues } from './helpers/overlay';
 
 beforeEach(() => agent.reset());
 
 // The overlay renders inside its own shadow root, so the host page's CSS cannot reach it.
 function setup() {
-  const app = document.createElement('div');
-  const target = document.createElement('div');
-  document.body.append(app, target);
-  mount(App, { target: app });
-  mount(Inspect, { target });
-  flushSync();
-  const overlay = target.querySelector('[data-testid="runespect-overlay-host"]')!.shadowRoot!;
+  const { app, target, root: overlay } = mountOverlay();
+  openAllValues(overlay);
   return { app, target, overlay };
 }
 
@@ -172,7 +167,9 @@ test("the overlay's 'Expand values' is kept, and opens the values of the next ov
     const target = document.body.appendChild(document.createElement('div'));
     mount(Inspect, { target });
     flushSync();
-    return target.querySelector('[data-testid="runespect-overlay-host"]')!.shadowRoot!;
+    const root = target.querySelector('[data-testid="runespect-overlay-host"]')!.shadowRoot!;
+    openAllValues(root);
+    return root;
   };
   const toggle = (o: ShadowRoot) => o.querySelector('[data-value="Settings.cfg"] [data-expand]')!;
   const first = open();

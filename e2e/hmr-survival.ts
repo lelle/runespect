@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { sleep, startServer, waitForUrl } from './lib.ts';
+import { openAllValues } from './overlay.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const COUNTER = resolve(root, 'apps/playground/src/Counter.svelte');
@@ -29,10 +30,13 @@ const poll = async <T>(read: () => Promise<T>, done: (value: T) => boolean): Pro
   }
   return value;
 };
-const counts = (page: Page): Promise<string[]> =>
-  page.$$eval('[data-edit="Counter.count"]', (els) =>
+// The overlay starts with every component's values closed, and a remount closes them again.
+const counts = async (page: Page): Promise<string[]> => {
+  await openAllValues(page);
+  return page.$$eval('[data-edit="Counter.count"]', (els) =>
     els.map((e) => (e as HTMLInputElement).value),
   );
+};
 
 const original = readFileSync(COUNTER, 'utf8');
 const originalCart = readFileSync(CART, 'utf8');
