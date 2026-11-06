@@ -35,7 +35,7 @@
   import CommitDetail from './CommitDetail.svelte';
   import { panelStatus } from './status';
   import { lastSeenLabel, sourceDetails, sourceLabel } from './sources';
-  import { startFollowing, follow, type FollowStep } from './follow';
+  import { startFollowing, follow, followedIdOf, type FollowStep } from './follow';
   import { EMPTY, hold, shown, type Held } from './held';
   import Tree from './Tree.svelte';
   import Detail from './Detail.svelte';
@@ -117,7 +117,7 @@
   });
   let following = $state.raw(start.state);
   let sources = $derived(following.sources);
-  let followedId = $derived(following.followedId);
+  let followedId = $derived(followedIdOf(following));
   let followed = $derived(sources.find((s) => s.id === followedId) ?? null);
   let sourcesOpen = $state(false);
   // Ticks only while the picker is open: it feeds the "last seen" ages in the dropdown and nothing

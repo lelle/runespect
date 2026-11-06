@@ -5,7 +5,7 @@ import {
   type ToPageMessage,
   type ToPanelMessage,
 } from '@runespect/agent/protocol/internal';
-import { chooseSource, trackSources, type Source } from './sources';
+import { hearHello, latestAt, type Source } from './sources';
 
 // Which page the panel follows, and everything that follows from it: what it shows, whom it asks,
 // and when the view must drop what it holds. One dev server is one channel, so every page it serves
@@ -20,16 +20,27 @@ export interface PageFacts {
   openInEditor: boolean;
 }
 
+/** Why the panel follows the page it follows, which decides what may take the panel from it. */
+export type Why = 'picked' | 'url' | 'first';
+
+export type Focus =
+  | { readonly kind: 'none' }
+  /** Opened for a url that no page has said hello at yet. */
+  | { readonly kind: 'waiting'; readonly url: string }
+  | { readonly kind: 'following'; readonly id: string; readonly why: Why };
+
 export interface Following {
   readonly sources: readonly Source[];
-  readonly followedId: string | null;
+  readonly focus: Focus;
   /** The url to come back to after a reload; the view saves it. */
   readonly rememberedUrl: string | null;
   readonly page: PageFacts;
-  readonly chosenId: string | null;
   /** Opened for one url: follow only the page at it, and go with that page when it navigates. */
   readonly waitForUrl: boolean;
 }
+
+export const followedIdOf = (state: Following): string | null =>
+  state.focus.kind === 'following' ? state.focus.id : null;
 
 export type FollowEvent =
   | { type: 'heard'; msg: ToPanelMessage }
@@ -60,10 +71,9 @@ export function startFollowing(opts: {
 }): FollowStep {
   const state: Following = {
     sources: [],
-    followedId: null,
+    focus: choose([], opts.rememberedUrl, opts.waitForUrl),
     rememberedUrl: opts.rememberedUrl,
     page: unknownPage(),
-    chosenId: null,
     waitForUrl: opts.waitForUrl,
   };
   return {
@@ -87,9 +97,13 @@ export function follow(state: Following, event: FollowEvent, now: number): Follo
     return { state, deliver: null, send: [addressed(state, event.msg)], switched: false };
   }
   if (event.type === 'pick') {
-    if (event.id === state.followedId) return quiet(state);
-    const url = state.sources.find((s) => s.id === event.id)?.url ?? null;
-    return refollow(state, { ...state, chosenId: event.id, rememberedUrl: url });
+    const picked = state.sources.find((s) => s.id === event.id);
+    if (!picked || picked.id === followedIdOf(state)) return quiet(state);
+    return refocus(state, {
+      ...state,
+      focus: { kind: 'following', id: picked.id, why: 'picked' },
+      rememberedUrl: picked.url ?? null,
+    });
   }
 
   const msg = event.msg;
@@ -111,24 +125,52 @@ export function follow(state: Following, event: FollowEvent, now: number): Follo
 }
 
 function heardHello(state: Following, msg: HelloMessage, now: number): FollowStep {
-  const sources = trackSources(state.sources, msg, now);
-  const known = state.sources.some((s) => s.id === msg.from);
-  if (known && state.followedId && msg.from !== state.followedId) {
-    return quiet({ ...state, sources });
-  }
-  const navigatedTo = msg.from === state.followedId && state.rememberedUrl ? msg.url : undefined;
-  return refollow(state, { ...state, sources, rememberedUrl: navigatedTo ?? state.rememberedUrl });
+  const { sources, heard: change } = hearHello(state.sources, msg, now);
+  const next = { ...state, sources };
+  if (!change) return quiet(next);
+  const id = followedIdOf(state);
+  if (change.type === 'refreshed' && id && change.id !== id) return quiet(next);
+  const navigatedTo = change.id === id && state.rememberedUrl ? msg.url : undefined;
+  return rechoose(state, { ...next, rememberedUrl: navigatedTo ?? state.rememberedUrl });
 }
 
-// Re-choose after the known pages or the choice changed. Following a new page asks it for its tree
-// (it answers with its hello too) and for what happened before the panel connected.
-function refollow(before: Following, next: Following): FollowStep {
-  const followedId = chooseSource(next.sources, next.chosenId, next.rememberedUrl, {
-    waitForUrl: next.waitForUrl,
+// A pick holds while its page is listed, which is always: nothing leaves the list.
+function rechoose(before: Following, next: Following): FollowStep {
+  if (next.focus.kind === 'following' && next.focus.why === 'picked') return quiet(next);
+  return refocus(before, {
+    ...next,
+    focus: choose(next.sources, next.rememberedUrl, next.waitForUrl),
   });
-  if (followedId === before.followedId) return quiet({ ...next, followedId });
-  const switched = before.followedId !== null;
-  const state = { ...next, followedId, page: switched ? unknownPage() : next.page };
+}
+
+// The page to follow, in order of respect for what the user meant (a pick is kept by rechoose):
+//   1. the url they were following before — a reload gives a new id, so the url is what survives
+//   2. the first page we heard from, or the newest at its url
+// A panel opened for a url (`waitForUrl`) follows nothing else while it waits: a page reads nothing
+// until a panel asks it by name, and asking another would wake it.
+function choose(
+  sources: readonly Source[],
+  rememberedUrl: string | null,
+  waitForUrl: boolean,
+): Focus {
+  if (rememberedUrl) {
+    const byUrl = latestAt(sources, rememberedUrl);
+    if (byUrl) return { kind: 'following', id: byUrl.id, why: 'url' };
+    if (waitForUrl) return { kind: 'waiting', url: rememberedUrl };
+  }
+  const first = sources[0];
+  if (!first) return { kind: 'none' };
+  const id = first.url ? (latestAt(sources, first.url) ?? first).id : first.id;
+  return { kind: 'following', id, why: 'first' };
+}
+
+// Following a new page asks it for its tree (it answers with its hello too) and for what happened
+// before the panel connected.
+function refocus(before: Following, next: Following): FollowStep {
+  const was = followedIdOf(before);
+  if (followedIdOf(next) === was) return quiet(next);
+  const switched = was !== null;
+  const state = { ...next, page: switched ? unknownPage() : next.page };
   return {
     state,
     deliver: null,
@@ -142,12 +184,13 @@ function refollow(before: Following, next: Following): FollowStep {
 // waits for its url shows nothing; one that follows nothing yet shows what it hears, since after a
 // reconnect a page sends its tree before its hello.
 function belongsToFollowed(msg: { from?: string }, state: Following): boolean {
-  if (state.followedId) return !msg.from || msg.from === state.followedId;
-  return !state.waitForUrl;
+  if (state.focus.kind === 'following') return !msg.from || msg.from === state.focus.id;
+  return state.focus.kind === 'none';
 }
 
 // On a shared dev-server channel every page hears every command, so an unaddressed edit lands in
 // every open tab.
 function addressed(state: Following, msg: ToPageMessage): ToPageMessage {
-  return state.followedId ? { ...msg, to: state.followedId } : msg;
+  const id = followedIdOf(state);
+  return id ? { ...msg, to: id } : msg;
 }

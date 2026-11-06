@@ -50,8 +50,8 @@ export {
 } from './history';
 export { lastSeenLabel, sourceDetails, sourceLabel } from './sources';
 export type { Source } from './sources';
-export { startFollowing, follow } from './follow';
-export type { Following, FollowEvent, FollowStep, PageFacts } from './follow';
+export { startFollowing, follow, followedIdOf } from './follow';
+export type { Focus, Following, FollowEvent, FollowStep, PageFacts, Why } from './follow';
 export { EMPTY, hold, shown } from './held';
 export type { Fetch, Held, HeldEvent, HeldStep } from './held';
 export type { PanelStatus, StatusLevel, StatusInput } from './status';
