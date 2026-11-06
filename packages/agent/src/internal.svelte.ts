@@ -58,8 +58,9 @@ export {
   HOT_EVENT,
   setOpenInEditor,
   openInEditor,
+  openFile,
 } from './transport.svelte';
-export type { HotChannel } from './transport.svelte';
+export type { HotChannel, OpenInEditor } from './transport.svelte';
 export { startLink, linkStep } from './link';
 export type { Link, LinkEffect, LinkEvent, LinkStep } from './link';
 

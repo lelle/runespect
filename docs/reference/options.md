@@ -36,14 +36,21 @@ A Vite plugin that applies only to the dev server, unless `includeInRelease` is 
   collections in `.svelte.ts` and `.svelte.js` modules outside `node_modules`, shown under
   **Modules** in the tree
 
-| Option             | Type      | Default | What it does                                                                                                     |
-| ------------------ | --------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
-| `openInEditor`     | `boolean` | `true`  | `false` removes **Open in editor** from the panel window, the overlay and the extension. Its links open VS Code. |
-| `includeInRelease` | `boolean` | `false` | `true` builds runespect into the code `vite build` produces. See below.                                          |
-| `panelInRelease`   | `boolean` | `true`  | With `includeInRelease`, `false` leaves the panel window out of the build.                                       |
+| Option             | Type                  | Default | What it does                                                                                 |
+| ------------------ | --------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| `openInEditor`     | `boolean \| 'vscode'` | `true`  | How **Open in editor** opens, in the panel window, the overlay and the extension. See below. |
+| `includeInRelease` | `boolean`             | `false` | `true` builds runespect into the code `vite build` produces. See below.                      |
+| `panelInRelease`   | `boolean`             | `true`  | With `includeInRelease`, `false` leaves the panel window out of the build.                   |
 
-Turn `openInEditor` off when your editor does not open `vscode://` links, or when the dev server
-runs on another machine than your editor.
+By default **Open in editor** asks the dev server to open the file, through Vite's own
+`/__open-in-editor`. It uses [launch-editor](https://github.com/yyx990803/launch-editor), which
+opens the editor `LAUNCH_EDITOR` or `EDITOR` names, or one it finds running: VS Code, WebStorm,
+Rider, Zed and others. The editor opens on the machine the dev server runs on, and a failure is
+reported in the dev server's terminal.
+
+- `'vscode'`: `vscode://` links instead, for a dev server in a container, WSL or on another machine,
+  where the editor must open on your side.
+- `false`: no **Open in editor** at all. It is always off in a build with `includeInRelease`.
 
 Unless `includeInRelease` is on, `vite build` does not run it, so a production build carries none of
 it.

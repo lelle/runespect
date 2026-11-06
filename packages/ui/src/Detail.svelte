@@ -4,7 +4,8 @@
   import { onDestroy, untrack } from 'svelte';
   import type { SerializedNode } from '@runespect/agent/protocol/internal';
   import { detailGroups } from './detail';
-  import { editorUrl, DEFAULT_EDITOR_TEMPLATE } from './editor';
+  import { openSource, sourceHref } from './editor';
+  import type { OpenInEditor } from '@runespect/agent/protocol/internal';
   import { Flasher } from './flash.svelte';
   import type { MenuItem } from './contextMenu';
   import ValueRow from './ValueRow.svelte';
@@ -21,8 +22,8 @@
     onStoreGlobal = () => {},
     onLog = () => {},
     onInspect = () => {},
-    editorTemplate = DEFAULT_EDITOR_TEMPLATE,
     openInEditor = true,
+    onOpen = () => {},
     expandValues = false,
   }: {
     node?: SerializedNode | null;
@@ -33,8 +34,9 @@
     onStoreGlobal?: (id: number, symbol: string, value: unknown) => void;
     onLog?: (node: SerializedNode) => void;
     onInspect?: (id: number, symbol: string, path: (string | number)[], limit?: number) => void;
-    editorTemplate?: string;
-    openInEditor?: boolean;
+    /** How Open in editor opens; `true` asks `onOpen`, `'vscode'` is a vscode:// link. */
+    openInEditor?: OpenInEditor;
+    onOpen?: (loc: string) => void;
     /** Start each value's top level expanded (settings toggle). */
     expandValues?: boolean;
   } = $props();
@@ -72,7 +74,8 @@
         <a
           class="rs-detail-source"
           data-detail-source
-          href={editorUrl(node.loc, editorTemplate)}
+          href={sourceHref(node.loc, openInEditor)}
+          onclick={(e) => node?.loc && openSource(node.loc, openInEditor, onOpen, e)}
           target="_blank"
           rel="noreferrer"
           title="Open in editor">&lt;/&gt;</a

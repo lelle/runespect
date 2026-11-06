@@ -5,7 +5,8 @@
   import { SvelteSet } from 'svelte/reactivity';
   import type { SerializedNode } from '@runespect/agent/protocol/internal';
   import { Flasher } from './flash.svelte';
-  import { editorUrl, DEFAULT_EDITOR_TEMPLATE } from './editor';
+  import { openSource, sourceHref } from './editor';
+  import type { OpenInEditor } from '@runespect/agent/protocol/internal';
   import { navigate, treeView, visibleRows, type TreeRow } from './treeNav';
   import { windowRange, scrollTopForRow, ROW_HEIGHT } from './virtual';
   import type { MenuItem } from './contextMenu';
@@ -25,8 +26,8 @@
     onStoreGlobal = () => {},
     onSelect = () => {},
     onInspect = () => {},
-    editorTemplate = DEFAULT_EDITOR_TEMPLATE,
     openInEditor = true,
+    onOpen = () => {},
     selectedId = null,
     filter = '',
     onlyStateful = false,
@@ -45,8 +46,9 @@
     onStoreGlobal?: (id: number, symbol: string, value: unknown) => void;
     onSelect?: (id: number | null) => void;
     onInspect?: (id: number, symbol: string, path: (string | number)[], limit?: number) => void;
-    editorTemplate?: string;
-    openInEditor?: boolean;
+    /** How Open in editor opens; `true` asks `onOpen`, `'vscode'` is a vscode:// link. */
+    openInEditor?: OpenInEditor;
+    onOpen?: (loc: string) => void;
     selectedId?: number | null;
     filter?: string;
     onlyStateful?: boolean;
@@ -187,9 +189,7 @@
     const open: MenuItem = {
       label: 'Open in editor',
       disabled: !node.loc,
-      onClick: () => {
-        if (node.loc) window.open(editorUrl(node.loc, editorTemplate), '_blank', 'noreferrer');
-      },
+      onClick: () => node.loc && openSource(node.loc, openInEditor, onOpen),
     };
     return [
       ...(openInEditor ? [open] : []),
@@ -220,7 +220,8 @@
       <a
         class="name"
         data-open={node.name}
-        href={editorUrl(node.loc, editorTemplate)}
+        href={sourceHref(node.loc, openInEditor)}
+        onclick={(e) => openSource(node.loc!, openInEditor, onOpen, e)}
         target="_blank"
         rel="noreferrer"
         oncontextmenu={(e) => openMenu(e, node)}

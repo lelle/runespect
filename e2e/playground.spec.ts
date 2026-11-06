@@ -193,11 +193,23 @@ test('element-picker: pick a component in the page → selected in the tree', as
   await expect(page.locator('.rs-selected[data-component="Counter"]')).toBeVisible();
 });
 
-test('component names are open-in-editor links', async ({ page }) => {
+// A name opens its file through the dev server's /__open-in-editor. The route answers here, so no
+// editor opens on the machine running the test.
+test('a component name opens its file through the dev server', async ({ page }) => {
+  const asked: string[] = [];
+  await page.route('**/__open-in-editor?**', (route) => {
+    asked.push(new URL(route.request().url()).searchParams.get('file') ?? '');
+    return route.fulfill({ status: 200, body: '' });
+  });
   await page.goto('/');
   const link = page.locator('a[data-open="Counter"]').first();
   await expect(link).toBeVisible();
-  expect(await link.getAttribute('href')).toMatch(/^vscode:\/\/file\/.*Counter\.svelte:\d+$/);
+
+  await link.click();
+
+  await expect(page.getByTestId('runespect-notice')).toContainText('Counter.svelte');
+  expect(asked).toEqual([expect.stringMatching(/Counter\.svelte(:\d+)?$/)]);
+  expect(page.url()).not.toContain('__open-in-editor');
 });
 
 test('a value flashes in the shape of the selection, and its text stays where it was', async ({

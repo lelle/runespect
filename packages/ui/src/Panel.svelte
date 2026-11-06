@@ -14,6 +14,7 @@
     logMessage,
     storeGlobalMessage,
     inspectMessage,
+    openInEditorMessage,
     PROTOCOL_VERSION,
     type Transport,
     type SerializedNode,
@@ -30,6 +31,9 @@
   import { Search } from './search.svelte';
   import { Preferences } from './preferences.svelte';
   import { formatBuildInfo, type BuildInfo } from './build';
+  import { openingNotice, UNREACHABLE_NOTICE } from './editor';
+  import { Notice } from './notice.svelte';
+  import NoticeBar from './NoticeBar.svelte';
   import { mergeCommits } from './history';
   import History from './History.svelte';
   import CommitDetail from './CommitDetail.svelte';
@@ -207,7 +211,16 @@
   const GRACE_MS = 2000;
   // The page turns it off with runespect({ openInEditor: false }) and says so in its hello. Without
   // a hello this is Names only, whose paths are relative to a project root the panel cannot know.
-  let openInEditor = $derived(following.page.openInEditor && following.page.tier !== null);
+  let openInEditor = $derived(following.page.tier !== null ? following.page.openInEditor : false);
+
+  // The page opens the file through its own dev server, which the extension cannot reach; launch-
+  // editor says nothing back, so the notice says where to look.
+  const notice = new Notice();
+  $effect(() => () => notice.dispose());
+  function onOpen(loc: string): void {
+    send(openInEditorMessage(loc));
+    notice.show(openingNotice(loc));
+  }
   let graceElapsed = $state(false);
   $effect(() => {
     const id = setTimeout(() => (graceElapsed = true), GRACE_MS);
@@ -259,6 +272,8 @@
       commits = mergeCommits(commits, msg.commits, HISTORY_COMMITS);
       historyTruncated = msg.truncated;
     }
+    // The page could not reach its dev server to open the editor.
+    else if (msg.kind === 'opened' && !msg.ok) notice.show(UNREACHABLE_NOTICE);
   }
 
   // ── messages lost on the way ──
@@ -354,6 +369,7 @@
   data-theme={theme.resolved}
   style={themeStyle(theme.resolved)}
 >
+  <NoticeBar {notice} floating />
   {#if status.level === 'warn'}
     <!-- Expanded: the panel can't do what you expect, so it says what it is and where to read up. -->
     <div class="status-bar" data-testid="runespect-status" data-level={status.level}>
@@ -550,6 +566,7 @@
               {exclude}
               flash={prefs.flash}
               {openInEditor}
+              {onOpen}
               namesOnly
             />
           </PaneBoundary>
@@ -560,6 +577,7 @@
               node={selectedNode}
               sent={selectedSent}
               {openInEditor}
+              {onOpen}
               expandValues={prefs.expandValues}
               {onEdit}
               {onCopy}
@@ -594,6 +612,9 @@
     display: flex;
     flex-direction: column;
     padding: 8px;
+  }
+  .runespect-panel {
+    position: relative;
   }
   .status-bar {
     display: flex;

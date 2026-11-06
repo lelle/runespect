@@ -147,6 +147,31 @@ export interface PickMessage extends ToSource {
   kind: 'pick';
   active: boolean;
 }
+/**
+ * How Open in editor opens: `true` through the dev server's /__open-in-editor (launch-editor, which
+ * follows LAUNCH_EDITOR and EDITOR), `'vscode'` as vscode:// links, `false` not at all.
+ */
+export type OpenInEditor = boolean | 'vscode';
+
+/** Vite's own route; its launch-editor opens `loc` (`file` or `file:line`) in the editor. */
+export function openInEditorUrl(loc: string): string {
+  return `/__open-in-editor?file=${encodeURIComponent(loc)}`;
+}
+
+/** Panel → page: open this source location in the editor, through the page's dev server. */
+export interface OpenInEditorMessage extends ToSource {
+  source: typeof SOURCE;
+  kind: 'open-in-editor';
+  /** A node's `loc`: `file` or `file:line`. */
+  loc: string;
+}
+/** Page → panel: whether the dev server took the request to open `loc`. */
+export interface OpenedMessage extends FromSource {
+  source: typeof SOURCE;
+  kind: 'opened';
+  loc: string;
+  ok: boolean;
+}
 export interface PickedMessage extends FromSource {
   source: typeof SOURCE;
   kind: 'picked';
@@ -198,8 +223,11 @@ export interface HelloMessage extends FromSource {
    */
   url?: string;
   title?: string;
-  /** The app turned Open in editor off: its editor does not open the panel's links. */
-  openInEditor?: false;
+  /**
+   * How Open in editor opens: absent through the dev server's /__open-in-editor, `'vscode'` as
+   * vscode:// links (a dev server in a container or on another machine), `false` not at all.
+   */
+  openInEditor?: Exclude<OpenInEditor, true>;
   /** The agent's package version, so a tab still running an older one can be told apart. */
   agentVersion?: string;
   /** Whether the tab is shown, so a panel choosing a page can take the one in front of the user. */
@@ -231,7 +259,9 @@ export type Message =
   | HydrateMessage
   | HelloMessage
   | PingMessage
-  | ByeMessage;
+  | ByeMessage
+  | OpenInEditorMessage
+  | OpenedMessage;
 
 // ── Message direction (an invariant the compiler enforces) ──
 // The window transport echoes a sender's own messages back to its own listener, so a `kind` that
@@ -245,6 +275,7 @@ export const TO_PANEL_KINDS = [
   'hello',
   'history',
   'bye',
+  'opened',
 ] as const; // agent → panel
 export const TO_PAGE_KINDS = [
   'request',
@@ -256,6 +287,7 @@ export const TO_PAGE_KINDS = [
   'inspect',
   'history-request',
   'ping',
+  'open-in-editor',
 ] as const; // panel → agent
 
 export type ToPanelMessage = Extract<Message, { kind: (typeof TO_PANEL_KINDS)[number] }>;
@@ -351,6 +383,14 @@ export function editMessage(
 // Panel → page: ask for the current tree (a panel that connects after page load).
 export function requestMessage(): RequestMessage {
   return { source: SOURCE, kind: 'request' };
+}
+
+export function openInEditorMessage(loc: string): OpenInEditorMessage {
+  return { source: SOURCE, kind: 'open-in-editor', loc };
+}
+
+export function openedMessage(loc: string, ok: boolean): OpenedMessage {
+  return { source: SOURCE, kind: 'opened', loc, ok };
 }
 
 export function pingMessage(to: string): PingMessage {

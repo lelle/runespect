@@ -11,6 +11,9 @@
   import SettingsMenu from './SettingsMenu.svelte';
   import StateFilterChip from './StateFilterChip.svelte';
   import { EMPTY, hold, shown, type Held } from './held';
+  import { openingNotice, UNREACHABLE_NOTICE } from './editor';
+  import { Notice } from './notice.svelte';
+  import NoticeBar from './NoticeBar.svelte';
   import type { SerializedNode } from '@runespect/agent/protocol/internal';
 
   // In-app overlay: feeds the live agent's serialized tree into the presentational
@@ -139,6 +142,15 @@
       document.removeEventListener('keydown', onKey, true);
     };
   });
+
+  // In the page, the overlay calls the dev server itself; launch-editor says nothing back, so the
+  // notice says where to look.
+  const notice = new Notice();
+  $effect(() => () => notice.dispose());
+  async function onOpen(loc: string): Promise<void> {
+    notice.show(openingNotice(loc));
+    if (!(await agent.openFile(loc))) notice.show(UNREACHABLE_NOTICE);
+  }
 </script>
 
 {#if open}
@@ -149,6 +161,7 @@
     data-theme={theme.resolved}
     style={themeStyle(theme.resolved)}
   >
+    <NoticeBar {notice} />
     <header>
       <strong>runespect</strong>
       <span class="actions">
@@ -216,6 +229,7 @@
       flash={prefs.flash}
       expandValues={prefs.expandValues}
       openInEditor={agent.openInEditor()}
+      {onOpen}
       onHover={highlightNode}
       onEdit={(id, sym, path, v) => agent.setValue(id, sym, v, path)}
       onInspect={(id, sym, path, limit) => inspect(id, [sym, ...path], limit)}
