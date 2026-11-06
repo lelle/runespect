@@ -3,6 +3,7 @@ import {
   pingMessage,
   requestMessage,
   type HelloMessage,
+  type OpenInEditor,
   type ToPageMessage,
   type ToPanelMessage,
 } from '@runespect/agent/protocol/internal';
@@ -27,7 +28,7 @@ export interface PageFacts {
   version: number | null;
   tier: 0 | 2 | null;
   problem: string | null;
-  openInEditor: boolean;
+  openInEditor: OpenInEditor;
 }
 
 /** Why the panel follows the page it follows, which decides what may take the panel from it. */
@@ -158,7 +159,7 @@ export function follow(state: Following, event: FollowEvent, now: number): Follo
     version: msg.version,
     tier: msg.tier ?? heard.state.page.tier,
     problem: msg.problem ?? null,
-    openInEditor: msg.openInEditor !== false,
+    openInEditor: msg.openInEditor ?? true,
   };
   return { ...heard, state: { ...heard.state, page } };
 }

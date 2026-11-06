@@ -116,6 +116,28 @@ test('overlay drops the editor links when Open in editor is off', () => {
   expect(overlay.querySelector('a[data-open]')).toBeNull();
 });
 
+// The overlay runs in the page, so it calls the dev server itself, and says where to look.
+test('overlay opens a name through the dev server, and says so', async () => {
+  const fetch = vi.fn(async (_url: string) => new Response(null, { status: 200 }));
+  vi.stubGlobal('fetch', fetch);
+  try {
+    const { overlay } = setup();
+    const link = overlay.querySelector('a[data-open="Counter"]') as HTMLAnchorElement;
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+    await new Promise((r) => setTimeout(r, 0));
+    flushSync();
+
+    expect(click.defaultPrevented).toBe(true);
+    expect(fetch.mock.calls[0][0]).toMatch(/^\/__open-in-editor\?file=.*Counter\.svelte/);
+    expect(overlay.querySelector('[data-testid="runespect-notice"]')?.textContent).toContain(
+      'Counter.svelte',
+    );
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
 // The overlay remembers it across reloads, as the panel does.
 test('the overlay remembers "only stateful", under the key the panel uses', () => {
   localStorage.clear();

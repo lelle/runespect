@@ -15,6 +15,7 @@ import {
   leave,
   reportFrom,
   setOpenInEditor,
+  type OpenInEditor,
   watchStore,
   type HotChannel,
   type Subscribable,
@@ -123,11 +124,11 @@ export function module(
  * Called once per page: report to the browser extension, and to the panel window, over the dev
  * server or in a build directly. Returns what stops both, for a test.
  */
-export function start(options: { hot?: HotChannel; openInEditor?: boolean } = {}): () => void {
+export function start(options: { hot?: HotChannel; openInEditor?: OpenInEditor } = {}): () => void {
   const stops: (() => void)[] = [];
   failOpen('the page', () => {
     // Before anything connects: the first hello already says so.
-    if (options.openInEditor === false) setOpenInEditor(false);
+    setOpenInEditor(options.openInEditor ?? true);
     stops.push(broadcast());
     if (options.hot) stops.push(connect(createHotTransport(options.hot)));
   });

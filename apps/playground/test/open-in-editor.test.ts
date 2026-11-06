@@ -1,4 +1,4 @@
-import { test, expect } from 'vitest';
+import { test, expect, vi } from 'vitest';
 import { mount, flushSync } from 'svelte';
 import { Tree, editorUrl } from '@runespect/ui/internal';
 import {
@@ -31,7 +31,8 @@ function mountTree(nodes: any) {
   return target;
 }
 
-test('Tree: component name links to the editor when loc is present', () => {
+// By default the link goes through the dev server, which opens the editor LAUNCH_EDITOR names.
+test('Tree: component name opens through the dev server when loc is present', () => {
   const target = mountTree([
     {
       id: 1,
@@ -46,7 +47,42 @@ test('Tree: component name links to the editor when loc is present', () => {
   ]);
   const link = target.querySelector('a[data-open="Counter"]') as HTMLAnchorElement;
   expect(link).toBeTruthy();
+  expect(link.getAttribute('href')).toBe('/__open-in-editor?file=%2Fsrc%2FCounter.svelte%3A9');
+});
+
+const counter = {
+  id: 1,
+  name: 'Counter',
+  parent: null,
+  children: [],
+  values: {},
+  snippets: [],
+  writable: [],
+  loc: '/src/Counter.svelte:9',
+};
+
+test('Tree: a click asks to open the file, and does not follow the link', () => {
+  const onOpen = vi.fn();
+  const target = document.body.appendChild(document.createElement('div'));
+  mount(Tree, { target, props: { nodes: [counter], onOpen } });
+  flushSync();
+  const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+  (target.querySelector('a[data-open="Counter"]') as HTMLElement).dispatchEvent(click);
+
+  expect(onOpen).toHaveBeenCalledWith('/src/Counter.svelte:9');
+  expect(click.defaultPrevented).toBe(true);
+});
+
+test("Tree: with openInEditor 'vscode' the name is a vscode:// link", () => {
+  const onOpen = vi.fn();
+  const target = document.body.appendChild(document.createElement('div'));
+  mount(Tree, { target, props: { nodes: [counter], openInEditor: 'vscode', onOpen } });
+  flushSync();
+  const link = target.querySelector('a[data-open="Counter"]') as HTMLAnchorElement;
+  link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
   expect(link.getAttribute('href')).toBe('vscode://file//src/Counter.svelte:9');
+  expect(onOpen).not.toHaveBeenCalled();
 });
 
 test('Tree: name is plain text when Open in editor is off', () => {
@@ -132,4 +168,66 @@ test('Panel: Open in editor is gone in Names only', () => {
   );
   expect(menu).not.toContain('Open in editor');
   expect(panel.target.querySelector('[data-detail-source]')).toBeNull();
+});
+
+// The panel cannot reach the dev server from the extension, so it asks the page, which calls its
+// own. launch-editor reports a failure only in the terminal, so the panel says where to look.
+function followed(hello: Message = { ...helloMessage(PROTOCOL_VERSION, 0), from: 'p1' }) {
+  const panel = mountPanel();
+  panel.emit(hello);
+  panel.emit({ ...treeMessage([cart]), from: 'p1' } as Message);
+  panel.click('[data-select="Cart"]');
+  return panel;
+}
+const notice = (t: HTMLElement) => t.querySelector('[data-testid="runespect-notice"]')?.textContent;
+
+test('Panel: Open in editor asks the page to open the file, and says where to look if nothing does', () => {
+  vi.useFakeTimers();
+  try {
+    const panel = followed();
+    const before = panel.sent.length;
+    panel.click('[data-detail-source]');
+
+    expect(panel.sent.slice(before)).toEqual([
+      expect.objectContaining({ kind: 'open-in-editor', loc: 'src/Cart.svelte:4', to: 'p1' }),
+    ]);
+    expect(notice(panel.target)).toContain('Opening Cart.svelte:4 in your editor');
+    expect(notice(panel.target)).toContain("See the dev server's terminal");
+
+    vi.advanceTimersByTime(3000);
+    flushSync();
+    expect(notice(panel.target)).toBeUndefined();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('Panel: a dev server the page could not reach is said so', () => {
+  const panel = followed();
+  panel.click('[data-detail-source]');
+  panel.emit({
+    source: 'runespect',
+    kind: 'opened',
+    loc: 'src/Cart.svelte:4',
+    ok: false,
+    from: 'p1',
+  } as Message);
+
+  expect(notice(panel.target)).toContain('Could not reach the dev server to open the editor');
+});
+
+test('Panel: a page that asks for vscode:// links gets them, and nothing is sent', () => {
+  const panel = followed({
+    ...helloMessage(PROTOCOL_VERSION, 0),
+    openInEditor: 'vscode',
+    from: 'p1',
+  });
+  const link = panel.target.querySelector('[data-detail-source]') as HTMLAnchorElement;
+  const before = panel.sent.length;
+  link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  flushSync();
+
+  expect(link.getAttribute('href')).toBe('vscode://file/src/Cart.svelte:4');
+  expect(panel.sent.slice(before)).toEqual([]);
+  expect(notice(panel.target)).toBeUndefined();
 });

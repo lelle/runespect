@@ -9,6 +9,9 @@ import {
   helloMessage,
   historyMessage,
   byeMessage,
+  openedMessage,
+  openInEditorUrl,
+  type OpenInEditor,
   type SourceIdentity,
   type ToPanelMessage,
   PROTOCOL_VERSION,
@@ -50,17 +53,33 @@ function redactQuery(search: string): string {
   return `?${parts.join('&')}`;
 }
 
-// runespect({ openInEditor: false }) sets this before the agent connects. State, because the overlay
-// reads it straight from here and can be mounted before the plugin's module runs.
-const editorLinks = $state({ on: true });
+export type { OpenInEditor };
 
-/** Whether the panels offer Open in editor. They hear it in the hello; the overlay reads it here. */
-export function setOpenInEditor(on: boolean): void {
-  editorLinks.on = on;
+// runespect({ openInEditor }) sets this before the agent connects. State, because the overlay
+// reads it straight from here and can be mounted before the plugin's module runs.
+const editorLinks = $state<{ mode: OpenInEditor }>({ mode: true });
+
+/** How the panels offer Open in editor. They hear it in the hello; the overlay reads it here. */
+export function setOpenInEditor(mode: OpenInEditor): void {
+  editorLinks.mode = mode;
 }
 
-export function openInEditor(): boolean {
-  return editorLinks.on;
+export function openInEditor(): OpenInEditor {
+  return editorLinks.mode;
+}
+
+/**
+ * Asks the page's own dev server to open `loc` (`file` or `file:line`) in the editor. Its
+ * launch-editor reports a failure only in the dev server's terminal, so true means it took the
+ * request, not that an editor opened.
+ */
+export async function openFile(loc: string): Promise<boolean> {
+  try {
+    const response = await fetch(openInEditorUrl(loc));
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 function identity(): SourceIdentity {
@@ -137,7 +156,7 @@ export function connect(transport: Transport): () => void {
         ...page,
         ...(replaces && { replaces }),
         agentVersion: version,
-        ...(editorLinks.on ? {} : { openInEditor: false as const }),
+        ...(editorLinks.mode === true ? {} : { openInEditor: editorLinks.mode }),
       }),
     );
 
@@ -245,7 +264,10 @@ export function connect(transport: Transport): () => void {
       if (msg.active) startPick((id) => send(pickedMessage(id)));
       else stopPick();
     } else if (msg.kind === 'log') logNode(msg.id);
-    else if (msg.kind === 'storeGlobal') storeGlobal(msg.id, msg.symbol);
+    else if (msg.kind === 'open-in-editor') {
+      const loc = msg.loc;
+      if (editorLinks.mode === true) void openFile(loc).then((ok) => send(openedMessage(loc, ok)));
+    } else if (msg.kind === 'storeGlobal') storeGlobal(msg.id, msg.symbol);
     else if (msg.kind === 'history-request')
       send(historyMessage(commitsSince(msg.since), historyTruncated()));
     else if (msg.kind === 'inspect')
@@ -392,5 +414,5 @@ export function pageChannel(): HotChannel {
 export function resetTransport(): void {
   for (const disconnect of [...connections]) disconnect();
   pageBefore = undefined;
-  editorLinks.on = true;
+  editorLinks.mode = true;
 }

@@ -121,17 +121,17 @@ answer to every `request` and `ping`, and, once a panel has asked, again wheneve
 title or visibility changes (an app that navigates on the client, followed through the Navigation
 API), and when it comes back from the back/forward cache.
 
-| Field          | Type       | Meaning                                                                     |
-| -------------- | ---------- | --------------------------------------------------------------------------- |
-| `version`      | `number`   | the page's `PROTOCOL_VERSION`; the panel warns when it differs from its own |
-| `tier`         | `0 \| 2`   | `0` from the agent, `2` from the capture; absent means Names only           |
-| `problem`      | `string?`  | why a capture recorded nothing                                              |
-| `url`          | `string?`  | path and query, with secret-looking query values replaced by `…`            |
-| `title`        | `string?`  | the page's `document.title`                                                 |
-| `openInEditor` | `false?`   | present when the app turned Open in editor off                              |
-| `agentVersion` | `string?`  | the agent's package version, such as `0.2.0`                                |
-| `visible`      | `boolean?` | whether the tab is shown (`document.visibilityState`)                       |
-| `replaces`     | `string?`  | the page before this one in the same tab, which a panel watched             |
+| Field          | Type                 | Meaning                                                                                   |
+| -------------- | -------------------- | ----------------------------------------------------------------------------------------- |
+| `version`      | `number`             | the page's `PROTOCOL_VERSION`; the panel warns when it differs from its own               |
+| `tier`         | `0 \| 2`             | `0` from the agent, `2` from the capture; absent means Names only                         |
+| `problem`      | `string?`            | why a capture recorded nothing                                                            |
+| `url`          | `string?`            | path and query, with secret-looking query values replaced by `…`                          |
+| `title`        | `string?`            | the page's `document.title`                                                               |
+| `openInEditor` | `false \| 'vscode'?` | how Open in editor opens: absent through the dev server, `'vscode'` as links, `false` off |
+| `agentVersion` | `string?`            | the agent's package version, such as `0.2.0`                                              |
+| `visible`      | `boolean?`           | whether the tab is shown (`document.visibilityState`)                                     |
+| `replaces`     | `string?`            | the page before this one in the same tab, which a panel watched                           |
 
 A page a panel has spoken to (a `request` or a `ping`) is watched: it keeps its id in the tab's
 `sessionStorage` under `__runespect_page`, which survives a reload. The next page in the tab finds
@@ -231,6 +231,17 @@ Panel to page. `active: boolean`: start or end element picking.
 ### `picked`
 
 Page to panel. `id: number | null`: the node the user clicked, or `null` when they pressed Escape.
+
+### `open-in-editor`
+
+Panel to page. `loc`: a node's `file` or `file:line`. The page asks its own dev server to open it
+(`/__open-in-editor?file=…`), and answers with `opened`. A page whose Open in editor is `'vscode'` or
+off ignores it: the panel only sends it when the hello says neither.
+
+### `opened`
+
+Page to panel. `loc`, and `ok`: whether the dev server took the request. launch-editor reports a
+failure to open an editor only in the dev server's terminal, so `ok` means the request reached it.
 
 ### `log`
 

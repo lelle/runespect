@@ -77,6 +77,12 @@ test('runespect({ openInEditor: false }) starts the page with Open in editor off
   expect(await load(runespect())).not.toContain('openInEditor');
 });
 
+test("runespect({ openInEditor: 'vscode' }) starts the page with vscode:// links", async () => {
+  const load = async (plugin: any) =>
+    plugin.load(await plugin.resolveId.handler('virtual:runespect-broadcast'));
+  expect(await load(runespect({ openInEditor: 'vscode' }))).toContain(`openInEditor: "vscode"`);
+});
+
 // What every resolved config has; the app root has no @runespect/ui to compare.
 const viteConfig = { root: tmpdir(), logger: { warn: () => {} } };
 

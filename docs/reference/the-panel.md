@@ -8,9 +8,9 @@ What each part of the runespect panel does. The panel is the same in the window 
 
 - Every component, nested as it is mounted, and **Modules**: the top-level state of `.svelte.ts`
   modules.
-- A component's name links to its source file in VS Code. `runespect({ openInEditor: false })`
-  removes the links and the menu item, for an editor that does not open `vscode://` links
-  ([Options](options.md#runespectoptions)).
+- A component's name opens its source file in your editor, through the dev server; a notice says
+  so for 3 seconds, and where to look if nothing opens. `runespect({ openInEditor: 'vscode' })`
+  makes them `vscode://` links, `false` removes them ([Options](options.md#runespectoptions)).
 - Right-click a row, or press Shift+F10, for **Open in editor**, **Log to console**, **Highlight in
   page** and **Copy name**.
 - Hovering a row highlights its element in the page. A component that renders only other

@@ -7,6 +7,7 @@ import {
   TO_PAGE_KINDS,
   TO_PANEL_KINDS,
   isRunespectMessage,
+  type OpenInEditor,
 } from '@runespect/agent/protocol/internal';
 import {
   PANEL_ROUTE,
@@ -27,10 +28,12 @@ import { instrumentModule } from './module-state.ts';
 
 export interface RunespectOptions {
   /**
-   * Offer Open in editor in the panels. Default `true`; its links open VS Code, so turn it off when
-   * your editor does not open `vscode://` links or the dev server runs on another machine.
+   * Offer Open in editor in the panels. Default `true`: through the dev server's
+   * `/__open-in-editor`, which opens the editor `LAUNCH_EDITOR` or `EDITOR` names. `'vscode'` makes
+   * them `vscode://` links instead, for a dev server in a container, WSL or on another machine,
+   * where the editor must open on your side. `false` removes them.
    */
-  openInEditor?: boolean;
+  openInEditor?: OpenInEditor;
   /**
    * Also build runespect into the code `vite build` produces, for a dev or test environment without
    * a dev server. Default `false`. Anyone who can open that build can read and edit its component
@@ -175,11 +178,12 @@ export function runespect(options: RunespectOptions = {}): Plugin {
       if (id !== RESOLVED) return;
       // Two consumers, one agent: window.postMessage feeds the browser extension, and Vite's HMR
       // channel feeds the standalone panel window at /__runespect/; start() attaches both.
-      const off = options.openInEditor === false || !!releaseRoot;
+      // A build has no dev server to open a file through, and no editor beside it.
+      const mode = releaseRoot ? false : (options.openInEditor ?? true);
       const startOptions = [
         ...(!releaseRoot ? ['hot: import.meta.hot'] : []),
         ...(releaseRoot && withPanel ? [`hot: ${agentCall('pageChannel')}`] : []),
-        ...(off ? ['openInEditor: false'] : []),
+        ...(mode === true ? [] : [`openInEditor: ${JSON.stringify(mode)}`]),
       ];
       return [
         `import * as __runespect from ${JSON.stringify(AGENT_RUNTIME)};`,
