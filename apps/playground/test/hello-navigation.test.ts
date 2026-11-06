@@ -9,6 +9,8 @@ let stop: (() => void) | undefined;
 let navigation: EventTarget;
 beforeEach(() => {
   agent.reset();
+  // A new tab: a tab a panel watched before is watched from its next page load on.
+  sessionStorage.clear();
   history.replaceState(null, '', '/');
   document.title = 'Shop';
   navigation = new EventTarget();
