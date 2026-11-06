@@ -154,3 +154,13 @@ test('a panel whose extension was reloaded tries once to mirror, then stops', as
 
   expect(evalInPage.calls).toBe(calls + 1);
 });
+
+test("a gap the panel reports reaches the page's timeline", async () => {
+  const { chrome, panel } = await chain();
+  panel.onGap({ from: 'i7', expected: 4, got: 5 });
+  await chrome.settle();
+
+  expect(pageEvents().filter((e) => e.ev === 'gap')).toEqual([
+    expect.objectContaining({ hop: 'panel', from: 'i7', expected: 4, got: 5 }),
+  ]);
+});

@@ -1,5 +1,5 @@
 import { mount } from 'svelte';
-import { Panel } from '@runespect/ui/internal';
+import { Panel, gapWarner } from '@runespect/ui/internal';
 import { createHotTransport, pageChannel, type HotChannel } from '@runespect/agent/internal';
 import { IN_BUILD_META, viteClientUrl } from '../src/panel-route.ts';
 
@@ -26,5 +26,6 @@ mount(Panel, {
   // Unbound on purpose: <Panel> hears every page on the channel and follows one by identity
   // (see sources.ts), which is what makes the source picker possible — a transport-level filter
   // would hide the other pages before the panel could offer them.
-  props: { transport: createHotTransport(hot), initialSourceUrl },
+  // This window is runespect's own page, so a lost message is said in its console.
+  props: { transport: createHotTransport(hot), initialSourceUrl, onGap: gapWarner(console.warn) },
 });

@@ -23,7 +23,9 @@ export type EventKind =
   /** The active tier changed (0 = app plugin, 2 = capture, null = none reported). */
   | 'tier'
   /** A pane of the panel failed to render — which one in `pane`, the message in `error`. */
-  | 'error';
+  | 'error'
+  /** A page skipped a number: `from`, the number `expected` and the one it `got`. */
+  | 'gap';
 
 export interface RunespectEvent {
   /** Wall-clock ms, so events from different hops merge into one timeline. */

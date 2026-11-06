@@ -20,5 +20,5 @@ const panel = startPanel({
 
 mount(Panel, {
   target: document.getElementById('app')!,
-  props: { transport: panel.transport, buildInfo, onError: panel.onError },
+  props: { transport: panel.transport, buildInfo, onError: panel.onError, onGap: panel.onGap },
 });

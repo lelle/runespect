@@ -48,6 +48,11 @@ export interface SerializedNode {
  */
 export interface FromSource {
   from?: string;
+  /**
+   * One more than the last message this connection sent, from 1: a panel that hears a number
+   * skipped knows a message was lost on the way, not merely never sent.
+   */
+  n?: number;
 }
 
 /**

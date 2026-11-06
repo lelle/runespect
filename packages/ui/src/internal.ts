@@ -50,6 +50,8 @@ export {
 } from './history';
 export { lastSeenLabel, sourceDetails, sourceLabel } from './sources';
 export type { Source } from './sources';
+export { gapWarner, hearNumber, REPAIR_ATTEMPTS } from './numbering';
+export type { Gap, NumberStep, Numbers } from './numbering';
 export { startFollowing, follow, followedIdOf } from './follow';
 export type { Focus, Following, FollowEvent, FollowStep, PageFacts, Why } from './follow';
 export { EMPTY, hold, shown } from './held';
