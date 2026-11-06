@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openAllValues, gotoValuesBeside } from './overlay';
 
 // Smoke test of the main path (vite-plugin preprocessor + broadcast + <Inspect>
 // overlay), exercised in a real browser. Catches what jsdom can't: real CSS/layout, real
@@ -13,6 +14,7 @@ test('overlay renders the live component tree in a real browser', async ({ page 
 
 test('editing a value in the overlay flows back into the app', async ({ page }) => {
   await page.goto('/');
+  await openAllValues(page);
   const edit = page.locator('[data-edit="Counter.count"]').first();
   await expect(edit).toBeVisible();
   await edit.fill('42');
@@ -25,6 +27,7 @@ test('edit-at-path: editing a nested leaf of a writable $state object updates th
   page,
 }) => {
   await page.goto('/');
+  await openAllValues(page);
   // <Settings> exposes a writable object `settings = { theme, size }`; the overlay renders it as
   // an expandable editable value (not a lossy string input).
   const cell = page.locator('[data-edit="Settings.settings"]').first();
@@ -44,6 +47,7 @@ test('node actions: log to console and store-as-global', async ({ page }) => {
   const logs: string[] = [];
   page.on('console', (m) => logs.push(m.text()));
   await page.goto('/');
+  await openAllValues(page);
   await page.locator('[data-log="Counter"]').first().click();
   await page.locator('[data-global="Counter.count"]').first().click();
   await expect.poll(() => logs.some((l) => l.includes('runespect'))).toBe(true);
@@ -54,7 +58,7 @@ test('right-click context menu on a node logs to console', async ({ page }) => {
   const logs: string[] = [];
   page.on('console', (m) => logs.push(m.text()));
   await page.goto('/');
-  await page.locator('a[data-open="Counter"]').first().click({ button: 'right' });
+  await page.locator('[data-component="Counter"] > .name').first().click({ button: 'right' });
   const menu = page.getByTestId('runespect-context-menu');
   await expect(menu).toBeVisible();
   await menu.getByRole('menuitem', { name: 'Log to console' }).click();
@@ -152,6 +156,7 @@ test('context inspection: a getContext value is reported on the consuming node',
   page,
 }) => {
   await page.goto('/');
+  await openAllValues(page);
   // <ContextConsumer> reads `greeting` via getContext — it shows up as one of its values.
   const greeting = page.locator('[data-value="ContextConsumer.greeting"]').first();
   await expect(greeting).toBeVisible();
@@ -162,6 +167,7 @@ test('context inspection: setContext is reported as a "provided" object on the p
   page,
 }) => {
   await page.goto('/');
+  await openAllValues(page);
   // <ContextProvider> does setContext('greeting', 'hi from context') → a "provided" context object.
   const provided = page.locator('[data-value="ContextProvider.provided"]').first();
   await expect(provided).toBeVisible();
@@ -170,6 +176,7 @@ test('context inspection: setContext is reported as a "provided" object on the p
 
 test('the overlay renders type-aware value previews', async ({ page }) => {
   await page.goto('/');
+  await openAllValues(page);
   const items = page.locator('[data-value="List.items"]').first();
   await expect(items).toBeVisible();
   await expect(items).toHaveAttribute('data-type', 'array');
@@ -178,6 +185,7 @@ test('the overlay renders type-aware value previews', async ({ page }) => {
 
 test('a read-only container can be expanded to drill into its entries', async ({ page }) => {
   await page.goto('/');
+  await openAllValues(page);
   const items = page.locator('[data-value="List.items"]').first();
   await items.locator('[data-expand]').click();
   await expect(items.locator('.rs-key')).toHaveCount(3); // ['a','b','c'] → 3 entries
@@ -216,6 +224,7 @@ test('a value flashes in the shape of the selection, and its text stays where it
   page,
 }) => {
   await page.goto('/');
+  await openAllValues(page);
   const value = page.locator('[data-value="Counter.doubled"]').first();
   const before = await value.boundingBox();
 
@@ -234,6 +243,7 @@ test('a value flashes in the shape of the selection, and its text stays where it
 
 test('a changed value flashes in the overlay (flash-on-update)', async ({ page }) => {
   await page.goto('/');
+  await openAllValues(page);
   const countInput = page.locator('[data-edit="Counter.count"]').first();
   await expect(countInput).toBeVisible();
   await page.locator('#app button').first().click(); // mutate $state
@@ -244,6 +254,7 @@ test('a changed value flashes in the overlay (flash-on-update)', async ({ page }
 // would finish the first blink, and one changing all the time would show nothing at all.
 test('a value that changes again flashes again, however often it changes', async ({ page }) => {
   await page.goto('/');
+  await openAllValues(page);
   const countInput = page.locator('[data-edit="Counter.count"]').first();
   await expect(countInput).toBeVisible();
   const button = page.locator('#app button').first();
@@ -281,6 +292,7 @@ test('settings: turning off "Flash on update" suppresses the value blink', async
   await page.goto('/');
   await page.evaluate(() => localStorage.clear()); // start from the default (flash on)
   await page.reload();
+  await openAllValues(page);
   await page.getByTestId('runespect-settings').click(); // open the gear menu
   await page.locator('[data-setting="Flash on update"]').uncheck();
   const countInput = page.locator('[data-edit="Counter.count"]').first();
@@ -346,7 +358,7 @@ test('once the extension asks, the page broadcasts incremental ops over window.p
 test('the highlight follows its element when the page scrolls', async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 350 }); // make the showcase scrollable
   await page.goto('/');
-  await page.locator('a[data-open="Counter"]').first().click({ button: 'right' });
+  await page.locator('[data-component="Counter"] > .name').first().click({ button: 'right' });
   await page
     .getByTestId('runespect-context-menu')
     .getByRole('menuitem', { name: 'Highlight in page' })
@@ -383,6 +395,7 @@ test("the host page's CSS does not reach the overlay", async ({ page }) => {
 // A component's values belong to it: they start under its name, not left of it under the twirl.
 test('in the overlay, a component’s values line up under its name', async ({ page }) => {
   await page.goto('/');
+  await openAllValues(page);
   const counter = page.locator('[data-component="Counter"]').first();
   await expect(counter).toBeVisible();
   const name = await counter.locator(':scope > .name').boundingBox();
@@ -396,6 +409,7 @@ test('in the overlay, a component’s values line up under its name', async ({ p
 
 test('svelte/reactivity values show their contents and follow the page', async ({ page }) => {
   await page.goto('/');
+  await openAllValues(page);
   const params = page.locator('[data-value="ReactivityComp.params"]').first();
   await expect(params).toContainText('URLSearchParams(1)');
   await params.locator('[data-expand]').first().click();
@@ -409,4 +423,96 @@ test('svelte/reactivity values show their contents and follow the page', async (
   await expect(wide).toContainText('true');
   await page.setViewportSize({ width: 500, height: 800 });
   await expect(wide).toContainText('false');
+});
+
+// #29: the overlay starts with every component closed; beside the tree, names on top and the
+// selected component's values below a divider, both in view.
+test("the overlay's values: (+) in the tree, or beside it below a divider", async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.locator('[data-edit="Counter.count"]')).toHaveCount(0);
+  await page.locator('[data-values="Counter"]').first().click();
+  await expect(page.locator('[data-edit="Counter.count"]')).toHaveCount(1);
+
+  await page.getByTestId('runespect-settings').click();
+  await page.locator('[data-setting="Values"]').selectOption('Beside the tree');
+  await page.keyboard.press('Escape'); // closes the settings menu, which lies over the tree
+  await page.locator('[data-select="Counter"]').first().click();
+  const detail = page.getByTestId('runespect-detail');
+  await expect(detail).toContainText('Counter');
+  await expect(page.getByTestId('runespect-resizer')).toBeVisible();
+  const tree = await page.getByTestId('runespect-tree-viewport').boundingBox();
+  const values = await detail.boundingBox();
+  expect(values!.y).toBeGreaterThan(tree!.y + tree!.height - 1);
+  // The overlay fills the window and no more, so the detail pane's last rows can be reached.
+  const box = await page.getByTestId('runespect-overlay').boundingBox();
+  expect(box!.y + box!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+});
+
+test('scrolling over the overlay never scrolls the page behind it', async ({ page }) => {
+  await gotoValuesBeside(page);
+  await page.locator('[data-select="Counter"]').first().click();
+  const detail = await page.getByTestId('runespect-detail').boundingBox();
+  await page.mouse.move(detail!.x + detail!.width / 2, detail!.y + detail!.height - 10);
+  await page.mouse.wheel(0, 600);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+  // Beside the overlay, the page still scrolls, so the check above is not vacuous.
+  await page.mouse.move(100, 300);
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+});
+
+test('the overlay heading and filter stay put while the tree scrolls under them', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await openAllValues(page);
+  const search = page.getByTestId('runespect-search');
+  const firstRow = page.locator('[data-component]').first();
+  const searchY = (await search.boundingBox())!.y;
+  const rowY = (await firstRow.boundingBox())!.y;
+  const overlay = (await page.getByTestId('runespect-overlay').boundingBox())!;
+  await page.mouse.move(overlay.x + overlay.width / 2, overlay.y + overlay.height - 20);
+  await page.mouse.wheel(0, 400);
+
+  await expect.poll(async () => (await firstRow.boundingBox())!.y).toBeLessThan(rowY);
+  expect((await search.boundingBox())!.y).toBe(searchY);
+});
+
+test('the settings menu shows whole over an overlay shorter than it', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('runespect-search').fill('no component is called this');
+  await page.getByTestId('runespect-settings').click();
+  // Its last row, below the overlay's bottom edge, is what a click there lands on.
+  const hit = await page.locator('[data-setting="Theme"]').evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return (
+      (el.getRootNode() as ShadowRoot).elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) ===
+      el
+    );
+  });
+  expect(hit).toBe(true);
+});
+
+test('the names-only tree says which keys move in it, on a line of its own below the rows', async ({
+  page,
+}) => {
+  await gotoValuesBeside(page);
+  const keys = page.getByTestId('runespect-tree-keys');
+  const viewport = page.getByTestId('runespect-tree-viewport');
+  await expect(keys).toBeVisible();
+  await expect(keys).toContainText('↑↓');
+  const height = (await viewport.boundingBox())!.height;
+  const below = await viewport.boundingBox();
+  expect((await keys.boundingBox())!.y).toBeGreaterThanOrEqual(below!.y + below!.height - 0.5);
+
+  // Tabbing in changes nothing about it, so the tree does not jump.
+  await page.getByTestId('runespect-search').focus();
+  await page.keyboard.press('Tab');
+  expect((await viewport.boundingBox())!.height).toBe(height);
 });

@@ -13,6 +13,16 @@
 
   let open = $state(false);
   let rootEl: HTMLElement;
+  // Fixed under the gear, so no scrolling or clipping ancestor (a short overlay) cuts it off.
+  let top = $state(0);
+  let right = $state(0);
+
+  function toggle(): void {
+    const r = rootEl.getBoundingClientRect();
+    top = r.bottom;
+    right = document.documentElement.clientWidth - r.right;
+    open = !open;
+  }
 
   $effect(() => {
     if (!open) return;
@@ -23,6 +33,8 @@
   });
 </script>
 
+<svelte:window onresize={() => (open = false)} />
+
 <div class="rs-settings" bind:this={rootEl}>
   <button
     type="button"
@@ -30,10 +42,15 @@
     data-testid="runespect-settings"
     aria-label="Settings"
     aria-expanded={open}
-    onclick={() => (open = !open)}>⚙</button
+    onclick={toggle}>⚙</button
   >
   {#if open}
-    <ul class="rs-settings-menu" data-testid="runespect-settings-menu" aria-label="Settings">
+    <ul
+      class="rs-settings-menu"
+      data-testid="runespect-settings-menu"
+      aria-label="Settings"
+      style="top:{top}px;right:{right}px"
+    >
       {#each items as item (item.label)}
         <li>
           {#if item.kind === 'select'}
@@ -95,9 +112,7 @@
     padding: 0 6px;
   }
   .rs-settings-menu {
-    position: absolute;
-    right: 0;
-    top: 100%;
+    position: fixed;
     z-index: 2147483647;
     min-width: 180px;
     margin: 2px 0 0;

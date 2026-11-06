@@ -35,6 +35,7 @@
     namesOnly = false,
     flash = true,
     expandValues = false,
+    collapsibleValues = false,
   }: {
     nodes?: SerializedNode[];
     /** What the page sent, without the values the panel fetched: what flashing compares. */
@@ -59,11 +60,30 @@
     flash?: boolean;
     /** Start each value's top level expanded (settings toggle). */
     expandValues?: boolean;
+    /**
+     * Each component's values open with (+) and close with (−), all closed at first; selecting a
+     * component opens it. Without it every component shows its values.
+     */
+    collapsibleValues?: boolean;
   } = $props();
 
   // What shows, for both forms of the tree: exclusion, the filters, the roots, and which nodes are
   // open. A filter opens every kept node, so the path to a match is never hidden by a collapse.
   const collapsed = new SvelteSet<number>();
+  const valuesOpen = new SvelteSet<number>();
+  /** Opens a component's values: the host calls it on each pick or search, also of the same one. */
+  export function openValues(id: number): void {
+    if (collapsibleValues) valuesOpen.add(id);
+  }
+  // A component that left is forgotten: ids grow with every remount, so it never comes back.
+  $effect(() => {
+    const present = new Set(nodes.map((n) => n.id));
+    untrack(() => {
+      for (const id of valuesOpen) if (!present.has(id)) valuesOpen.delete(id);
+    });
+  });
+  const toggleValues = (id: number) =>
+    valuesOpen.has(id) ? valuesOpen.delete(id) : valuesOpen.add(id);
   let view = $derived(treeView(nodes, { query: filter, onlyStateful, exclude, collapsed }));
   let effectiveNodes = $derived(view.nodes);
   let byId = $derived(view.byId);
@@ -201,6 +221,8 @@
 </script>
 
 {#snippet tree(node: SerializedNode)}
+  {@const toggleable = collapsibleValues && Object.keys(node.values).length > 0}
+  {@const open = !collapsibleValues || valuesOpen.has(node.id)}
   <li class="node" class:rs-selected={node.id === selectedId} data-component={node.name}>
     {#if node.children.length}
       <button
@@ -216,25 +238,29 @@
     {:else}
       <span class="twirl-spacer"></span>
     {/if}
+    <!-- The name opens and closes the values, as a row does in the panel; </> opens the editor.
+         With its values closed there is no value to blink, so the name blinks instead. -->
+    <button
+      type="button"
+      class="name name-btn"
+      class:rs-flash={flash && !open && flasher.nodeFlashing(node.id)}
+      class:rs-flash-again={!open && flasher.nodeFlashAgain(node.id)}
+      aria-expanded={toggleable ? open : undefined}
+      onclick={() => toggleable && toggleValues(node.id)}
+      oncontextmenu={(e) => openMenu(e, node)}
+      onmouseenter={() => onHover(node.id)}
+      onmouseleave={() => onHover(null)}>{node.name}</button
+    >
     {#if node.loc && openInEditor}
       <a
-        class="name"
+        class="act source"
         data-open={node.name}
         href={sourceHref(node.loc, openInEditor)}
         onclick={(e) => openSource(node.loc!, openInEditor, onOpen, e)}
         target="_blank"
         rel="noreferrer"
-        oncontextmenu={(e) => openMenu(e, node)}
-        onmouseenter={() => onHover(node.id)}
-        onmouseleave={() => onHover(null)}>{node.name}</a
-      >
-    {:else}
-      <button
-        type="button"
-        class="name name-btn"
-        oncontextmenu={(e) => openMenu(e, node)}
-        onmouseenter={() => onHover(node.id)}
-        onmouseleave={() => onHover(null)}>{node.name}</button
+        title="Open in editor"
+        aria-label="Open in editor">&lt;/&gt;</a
       >
     {/if}
     <button
@@ -244,39 +270,50 @@
       aria-label="Log to console"
       onclick={() => onLog(node)}>⎙</button
     >
-    <ul class="values">
-      {#each Object.entries(node.values) as [sym, val] (sym)}
-        <li class="value" data-symbol={sym}>
-          <span class="sym">{sym}</span>
-          <ValueRow
-            {node}
-            {sym}
-            {val}
-            flashing={flash && flasher.isFlashing(node.id, sym)}
-            flashAgain={flasher.flashAgain(node.id, sym)}
-            defaultExpanded={expandValues}
-            {onEdit}
-            {onInspect}
-            editAttr="data-edit"
-            valueAttr="data-value"
-          />
-          <button
-            class="act"
-            data-copy={`${node.name}.${sym}`}
-            title="Copy value"
-            aria-label="Copy value"
-            onclick={() => onCopy(val)}>⧉</button
-          >
-          <button
-            class="act"
-            data-global={`${node.name}.${sym}`}
-            title="Store as window.$r"
-            aria-label="Store as window.$r"
-            onclick={() => onStoreGlobal(node.id, sym, val)}>$r</button
-          >
-        </li>
-      {/each}
-    </ul>
+    {#if toggleable}
+      <button
+        class="act values-toggle"
+        data-values={node.name}
+        aria-expanded={open}
+        title={open ? 'Hide values' : 'Show values'}
+        onclick={() => toggleValues(node.id)}>{open ? '(−)' : '(+)'}</button
+      >
+    {/if}
+    {#if open}
+      <ul class="values">
+        {#each Object.entries(node.values) as [sym, val] (sym)}
+          <li class="value" data-symbol={sym}>
+            <span class="sym">{sym}</span>
+            <ValueRow
+              {node}
+              {sym}
+              {val}
+              flashing={flash && flasher.isFlashing(node.id, sym)}
+              flashAgain={flasher.flashAgain(node.id, sym)}
+              defaultExpanded={expandValues}
+              {onEdit}
+              {onInspect}
+              editAttr="data-edit"
+              valueAttr="data-value"
+            />
+            <button
+              class="act"
+              data-copy={`${node.name}.${sym}`}
+              title="Copy value"
+              aria-label="Copy value"
+              onclick={() => onCopy(val)}>⧉</button
+            >
+            <button
+              class="act"
+              data-global={`${node.name}.${sym}`}
+              title="Store as window.$r"
+              aria-label="Store as window.$r"
+              onclick={() => onStoreGlobal(node.id, sym, val)}>$r</button
+            >
+          </li>
+        {/each}
+      </ul>
+    {/if}
     {#if node.snippets.length}
       <ul class="snippets">
         {#each node.snippets as snip (snip)}
@@ -358,29 +395,33 @@
 />
 
 {#if namesOnly}
-  <div
-    class="rs-viewport"
-    data-testid="runespect-tree-viewport"
-    bind:this={viewportEl}
-    onscroll={(e) => (scrollTop = e.currentTarget.scrollTop)}
-  >
-    <ul
-      class="roots"
-      bind:this={rootEl}
-      role="tree"
-      tabindex="0"
-      aria-label="Components"
-      aria-activedescendant={activeDescendant}
-      style:--rs-row-height="{ROW_HEIGHT}px"
-      onkeydown={onKeyNav}
-      onfocusin={keepFocusOnTree}
+  <div class="rs-tree">
+    <div
+      class="rs-viewport"
+      data-testid="runespect-tree-viewport"
+      bind:this={viewportEl}
+      onscroll={(e) => (scrollTop = e.currentTarget.scrollTop)}
     >
-      <li class="rs-pad-top" role="none" style:height="{rowWindow.padTop}px"></li>
-      {#each windowedRows as row (row.id)}
-        {@render flatRow(row)}
-      {/each}
-      <li class="rs-pad-bottom" role="none" style:height="{rowWindow.padBottom}px"></li>
-    </ul>
+      <ul
+        class="roots"
+        bind:this={rootEl}
+        role="tree"
+        tabindex="0"
+        aria-label="Components"
+        aria-activedescendant={activeDescendant}
+        style:--rs-row-height="{ROW_HEIGHT}px"
+        onkeydown={onKeyNav}
+        onfocusin={keepFocusOnTree}
+      >
+        <li class="rs-pad-top" role="none" style:height="{rowWindow.padTop}px"></li>
+        {#each windowedRows as row (row.id)}
+          {@render flatRow(row)}
+        {/each}
+        <li class="rs-pad-bottom" role="none" style:height="{rowWindow.padBottom}px"></li>
+      </ul>
+    </div>
+    <!-- The tree is one Tab stop; this says what moves inside it. -->
+    <p class="rs-keys" data-testid="runespect-tree-keys">↑↓ select · ←→ open/close</p>
   </div>
 {:else}
   <ul class="roots" bind:this={rootEl}>
@@ -400,9 +441,25 @@
 {/if}
 
 <style>
-  .rs-viewport {
+  .rs-tree {
     height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .rs-viewport {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: auto;
+  }
+  /* Always its own line: shown only on focus it would shrink the viewport and scroll it, and laid
+     over the rows it would hide the last one. */
+  .rs-keys {
+    flex: none;
+    margin: 0;
+    padding: 2px 4px;
+    border-top: 1px solid var(--rs-border-soft);
+    color: var(--rs-muted);
+    font-size: 11px;
   }
   .rs-row {
     box-sizing: border-box;
@@ -424,13 +481,6 @@
   .name {
     color: var(--rs-name);
     font-weight: bold;
-  }
-  a.name {
-    text-decoration: none;
-    cursor: pointer;
-  }
-  a.name:hover {
-    text-decoration: underline;
   }
   button.name-btn {
     background: transparent;
@@ -464,6 +514,9 @@
   }
   .sym {
     color: var(--rs-sym);
+  }
+  .act.source {
+    text-decoration: none;
   }
   .act {
     background: transparent;

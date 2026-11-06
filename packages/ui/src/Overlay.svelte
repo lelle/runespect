@@ -3,6 +3,11 @@
 <script lang="ts">
   import * as agent from '@runespect/agent/internal';
   import Tree from './Tree.svelte';
+  import Detail from './Detail.svelte';
+  import Split from './Split.svelte';
+  import PaneBoundary from './PaneBoundary.svelte';
+  import { clampSplit } from './layout';
+  import { loadSetting, saveSetting } from './persisted';
   import { clipboardText } from './valueView';
   import { themeStyle, THEMES, type ThemeSetting } from './theme';
   import { Theme } from './theme.svelte';
@@ -35,6 +40,38 @@
   ): void {
     asked = hold(asked, { type: 'asked', id, path, limit }).state;
   }
+  // What the tree and the detail pane do, the same in both layouts.
+  const onEdit = (id: number, sym: string, path: (string | number)[], v: unknown) =>
+    agent.setValue(id, sym, v, path);
+  const onInspect = (id: number, sym: string, path: (string | number)[], limit?: number) =>
+    inspect(id, [sym, ...path], limit);
+  const onLog = (node: SerializedNode) =>
+    console.log(`%c[runespect] <${node.name}>`, 'color:#c2410c', node);
+  const onCopy = (v: unknown) => navigator.clipboard?.writeText(clipboardText(v));
+  const onStoreGlobal = (_id: number, _sym: string, v: unknown) => {
+    (window as unknown as { $r: unknown }).$r = v;
+    console.log('[runespect] window.$r =', v);
+  };
+
+  // ── where the values show ── In the tree, one component at a time, all closed at first so the
+  // tree is one row per component; or beside it, for the selected component. The overlay's own
+  // setting: the panel always shows them beside the tree.
+  const VALUES_IN_TREE = 'In the tree';
+  const VALUES_BESIDE = 'Beside the tree';
+  let valuesWhere = $state(
+    loadSetting<string>(
+      'overlayValues',
+      VALUES_IN_TREE,
+      (v) => v === VALUES_IN_TREE || v === VALUES_BESIDE,
+    ),
+  );
+  $effect(() => saveSetting('overlayValues', valuesWhere));
+  let beside = $derived(valuesWhere === VALUES_BESIDE);
+  let besideSplit = $state(clampSplit(loadSetting('overlayBesideSplit', 55)));
+  $effect(() => saveSetting('overlayBesideSplit', besideSplit));
+  let selectedNode = $derived(nodes.find((n) => n.id === selectedId) ?? null);
+  let selectedSent = $derived(sent.find((n) => n.id === selectedId) ?? null);
+
   // Shared with the panel, under the same keys.
   const prefs = new Preferences();
   const theme = new Theme();
@@ -42,7 +79,7 @@
   const search = new Search(
     () => nodes,
     (id) => {
-      selectedId = id;
+      select(id);
       highlightNode(id);
     },
   );
@@ -53,6 +90,12 @@
   // Svelte's __svelte_meta, so it works in the in-app overlay (main world).
   let picking = $state(false);
   let selectedId = $state<number | null>(null);
+  let tree = $state<ReturnType<typeof Tree>>();
+  // Selecting, picking or searching to a component opens its values, also one already selected.
+  function select(id: number | null): void {
+    selectedId = id;
+    if (id != null) tree?.openValues(id);
+  }
   // The rect is rendered position:fixed, so it has to be recomputed whenever the page moves under
   // it — otherwise the outline stays where the element used to be as soon as you scroll. Keeping
   // the elements (not just their rect) is what makes that possible.
@@ -112,7 +155,7 @@
     if (inOverlay(e)) return; // let overlay clicks (e.g. the pick button) work
     e.preventDefault();
     e.stopPropagation();
-    selectedId = agent.nodeIdForElement(target, nodes);
+    select(agent.nodeIdForElement(target, nodes));
     stopPicking();
   }
 
@@ -157,6 +200,7 @@
   <aside
     bind:this={overlayEl}
     class="runespect-overlay"
+    class:beside-layout={beside}
     data-testid="runespect-overlay"
     data-theme={theme.resolved}
     style={themeStyle(theme.resolved)}
@@ -184,6 +228,13 @@
               label: 'Only components with state',
               checked: prefs.onlyStateful,
               onChange: (v) => (prefs.onlyStateful = v),
+            },
+            {
+              kind: 'select',
+              label: 'Values',
+              value: valuesWhere,
+              options: [VALUES_IN_TREE, VALUES_BESIDE],
+              onChange: (v) => (valuesWhere = v),
             },
             {
               kind: 'select',
@@ -220,27 +271,57 @@
     {#if prefs.onlyStateful}
       <StateFilterChip onClear={() => (prefs.onlyStateful = false)} />
     {/if}
-    <Tree
-      {sent}
-      {nodes}
-      {selectedId}
-      filter={search.query}
-      onlyStateful={prefs.onlyStateful}
-      flash={prefs.flash}
-      expandValues={prefs.expandValues}
-      openInEditor={agent.openInEditor()}
-      {onOpen}
-      onHover={highlightNode}
-      onEdit={(id, sym, path, v) => agent.setValue(id, sym, v, path)}
-      onInspect={(id, sym, path, limit) => inspect(id, [sym, ...path], limit)}
-      onLog={(node: SerializedNode) =>
-        console.log(`%c[runespect] <${node.name}>`, 'color:#c2410c', node)}
-      onCopy={(v: unknown) => navigator.clipboard?.writeText(clipboardText(v))}
-      onStoreGlobal={(_id: number, _sym: string, v: unknown) => {
-        (window as unknown as { $r: unknown }).$r = v;
-        console.log('[runespect] window.$r =', v);
-      }}
-    />
+    {#snippet treeView()}
+      <Tree
+        {sent}
+        {nodes}
+        {selectedId}
+        filter={search.query}
+        onlyStateful={prefs.onlyStateful}
+        flash={prefs.flash}
+        expandValues={prefs.expandValues}
+        openInEditor={agent.openInEditor()}
+        {onOpen}
+        namesOnly={beside}
+        collapsibleValues={!beside}
+        bind:this={tree}
+        onSelect={select}
+        onHover={highlightNode}
+        {onEdit}
+        {onInspect}
+        {onLog}
+        {onCopy}
+        {onStoreGlobal}
+      />
+    {/snippet}
+    {#if beside}
+      <div class="beside">
+        <Split direction="vertical" bind:pct={besideSplit} label="Resize tree and values">
+          {#snippet left()}
+            <PaneBoundary name="tree">{@render treeView()}</PaneBoundary>
+          {/snippet}
+          {#snippet right()}
+            <PaneBoundary name="detail">
+              <Detail
+                node={selectedNode}
+                sent={selectedSent}
+                openInEditor={agent.openInEditor()}
+                {onOpen}
+                expandValues={prefs.expandValues}
+                flash={prefs.flash}
+                {onEdit}
+                {onCopy}
+                {onStoreGlobal}
+                {onLog}
+                {onInspect}
+              />
+            </PaneBoundary>
+          {/snippet}
+        </Split>
+      </div>
+    {:else}
+      <div class="tree-scroll">{@render treeView()}</div>
+    {/if}
   </aside>
 {:else}
   <button class="runespect-reopen" onclick={() => (open = true)}>runespect</button>
@@ -264,8 +345,12 @@
     top: 0;
     right: 0;
     width: 320px;
+    box-sizing: border-box;
     max-height: 100vh;
-    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    overscroll-behavior: contain;
     background: var(--rs-bg);
     color: var(--rs-fg);
     font:
@@ -273,6 +358,21 @@
       monospace;
     padding: 8px;
     z-index: 2147483647;
+  }
+  /* The heading and filter stay put: only the tree, or the split beside it, scrolls. Beside the
+     tree the overlay fills the window, for the split and the tree's scroll viewport to divide. */
+  .beside-layout {
+    height: 100vh;
+  }
+  .tree-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+  .beside {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
   }
   header {
     display: flex;

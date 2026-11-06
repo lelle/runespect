@@ -10,17 +10,21 @@
   let {
     pct = $bindable(45),
     label = 'Resize panes',
+    direction = 'horizontal',
     left,
     right,
   }: {
-    /** Left-pane width as a % of the container. Bindable so the host can persist it. */
+    /** First pane's size as a % of the container. Bindable so the host can persist it. */
     pct?: number;
+    /** Side by side, or `'vertical'`: one above the other, with the divider across. */
+    direction?: 'horizontal' | 'vertical';
     label?: string;
     left: Snippet;
     right: Snippet;
   } = $props();
 
   let el = $state<HTMLDivElement>();
+  let vertical = $derived(direction === 'vertical');
 
   // A drag ends on release, on a cancelled pointer (a gesture taken over by the browser), and when
   // the panes go away mid-drag; otherwise every later move would keep resizing.
@@ -33,7 +37,9 @@
     if (!rect) return;
     endDrag?.();
     const onMove = (ev: PointerEvent): number =>
-      (pct = splitPercent(ev.clientX, rect.left, rect.width));
+      (pct = vertical
+        ? splitPercent(ev.clientY, rect.top, rect.height)
+        : splitPercent(ev.clientX, rect.left, rect.width));
     const end = (): void => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', end);
@@ -47,7 +53,8 @@
   }
 
   function onResizeKey(e: KeyboardEvent): void {
-    const step = e.key === 'ArrowLeft' ? -4 : e.key === 'ArrowRight' ? 4 : 0;
+    const [back, forward] = vertical ? ['ArrowUp', 'ArrowDown'] : ['ArrowLeft', 'ArrowRight'];
+    const step = e.key === back ? -4 : e.key === forward ? 4 : 0;
     if (step) pct = clampSplit(pct + step);
     else if (e.key === 'Home') pct = SPLIT_MIN;
     else if (e.key === 'End') pct = SPLIT_MAX;
@@ -56,7 +63,7 @@
   }
 </script>
 
-<div class="split" bind:this={el}>
+<div class="split" class:vertical bind:this={el}>
   <div class="pane left" style:flex="0 0 {pct}%">{@render left()}</div>
   <!-- ARIA window-splitter: a focusable role="separator" with aria-valuenow IS interactive -->
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -64,7 +71,7 @@
   <div
     class="resizer"
     role="separator"
-    aria-orientation="vertical"
+    aria-orientation={vertical ? 'horizontal' : 'vertical'}
     aria-valuenow={Math.round(pct)}
     aria-valuemin={SPLIT_MIN}
     aria-valuemax={SPLIT_MAX}
@@ -104,6 +111,21 @@
     cursor: col-resize;
     background: var(--rs-border-soft);
     border-radius: 2px;
+  }
+  .vertical {
+    flex-direction: column;
+  }
+  .vertical .pane {
+    min-height: 0;
+  }
+  .vertical .right {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--rs-border-soft);
+    padding-top: 8px;
+  }
+  .vertical .resizer {
+    cursor: row-resize;
   }
   .resizer:hover,
   .resizer:focus-visible {

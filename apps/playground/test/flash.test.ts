@@ -107,3 +107,18 @@ test('Tree: only the changed value flashes', async () => {
   expect(countInput.classList.contains('rs-flash')).toBe(true);
   expect(doubledVal.classList.contains('rs-flash')).toBe(false);
 });
+
+// With its values closed a component shows no value to blink, so its name blinks instead, as in
+// the panel's names-only tree.
+test('Tree: a component whose values are closed flashes its name when they change', async () => {
+  const { container, rerender } = render(Tree, {
+    nodes: node({ count: 1 }),
+    collapsibleValues: true,
+  });
+  await rerender({ nodes: node({ count: 2 }), collapsibleValues: true });
+  await tick();
+
+  expect(container.querySelector('[data-component="Counter"] > .name')!.classList).toContain(
+    'rs-flash',
+  );
+});

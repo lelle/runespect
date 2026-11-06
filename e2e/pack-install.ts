@@ -16,6 +16,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
 import { checker, startServer, waitForUrl } from './lib.ts';
+import { openAllValues } from './overlay.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGES = ['agent', 'ui', 'vite-plugin'];
@@ -366,6 +367,7 @@ if (import.meta.env.DEV) {
   check(events > 0, 'the agent publishes window.__runespect', `events: ${events}`);
   const overlay = page.locator('[data-component="App"]');
   check((await overlay.count()) > 0, 'the <Inspect> overlay shows the app');
+  await openAllValues(page);
   const count = page.locator('[data-edit="App.count"]');
   check((await count.count()) === 1 && (await count.inputValue()) === '1', 'it shows App.count');
   check(

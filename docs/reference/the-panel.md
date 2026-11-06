@@ -8,8 +8,8 @@ What each part of the runespect panel does. The panel is the same in the window 
 
 - Every component, nested as it is mounted, and **Modules**: the top-level state of `.svelte.ts`
   modules.
-- A component's name opens its source file in your editor, through the dev server; a notice says
-  so for 3 seconds, and where to look if nothing opens. `runespect({ openInEditor: 'vscode' })`
+- **</>** beside a component opens its source file in your editor, through the dev server; a notice
+  says so for 3 seconds, and where to look if nothing opens. `runespect({ openInEditor: 'vscode' })`
   makes them `vscode://` links, `false` removes them ([Options](options.md#runespectoptions)).
 - Right-click a row, or press Shift+F10, for **Open in editor**, **Log to console**, **Highlight in
   page** and **Copy name**.
@@ -78,3 +78,9 @@ past state would promise more than it can keep.
 
 The ⚙ menu has **Flash on update**, **Expand values** (open each value's first level) and
 **Theme**. Its footer shows the version the panel was built from.
+
+The in-page overlay (`<Inspect>`) has **Values** besides: **In the tree** (the default) shows a
+component's values under its name once you click the name or (+), and all start closed, so the tree is one
+row per component; **Beside the tree** shows names only, and the selected component's values below a
+divider you can drag. Selecting, picking or searching to a component opens it. The choice is the
+overlay's own; the panel always shows values beside the tree.

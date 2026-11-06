@@ -47,7 +47,8 @@ export class Flasher {
   #clear(key: string, id: number): void {
     this.#flashing.delete(key);
     this.#timers.delete(key);
-    if (!this.nodeFlashing(id)) this.#nodeTurns.delete(id);
+    for (const k of this.#flashing.keys()) if (k.startsWith(`${id}:`)) return;
+    this.#nodeTurns.delete(id);
   }
 
   isFlashing(id: number, sym: string): boolean {
@@ -63,10 +64,10 @@ export class Flasher {
   }
 
   // True if any of a node's symbols are flashing — used to flash the node name when its values
-  // are hidden (names-only tree).
+  // are hidden. A node is in #nodeTurns exactly while one of its symbols flashes, so every row
+  // asks one key instead of scanning, and re-renders only for its own flashes.
   nodeFlashing(id: number): boolean {
-    for (const key of this.#flashing.keys()) if (key.startsWith(`${id}:`)) return true;
-    return false;
+    return this.#nodeTurns.has(id);
   }
 
   destroy(): void {

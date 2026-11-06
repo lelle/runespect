@@ -25,6 +25,7 @@
     openInEditor = true,
     onOpen = () => {},
     expandValues = false,
+    flash = true,
   }: {
     node?: SerializedNode | null;
     /** The node as the page sent it, without the values the panel fetched: what flashing compares. */
@@ -39,6 +40,8 @@
     onOpen?: (loc: string) => void;
     /** Start each value's top level expanded (settings toggle). */
     expandValues?: boolean;
+    /** Flash a value when it changes (settings toggle). */
+    flash?: boolean;
   } = $props();
 
   let groups = $derived(node ? detailGroups(node) : []);
@@ -47,6 +50,7 @@
   const flasher = new Flasher();
   $effect(() => {
     const n = sent === undefined ? node : sent;
+    if (!flash) return;
     untrack(() => flasher.update(n ? [n] : []));
   });
   onDestroy(() => flasher.destroy());
