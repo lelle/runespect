@@ -1,11 +1,11 @@
 import { tierLabel } from './status';
 import type { HelloMessage } from '@runespect/agent/protocol/internal';
 
-// Which page the panel is looking at.
+// The pages the panel has heard, and how each is shown.
 //
 // One dev server is one channel: every page served by it — a second tab, an app at another route,
-// islands from separate bundles — announces itself on the same bus. The panel follows exactly one,
-// and these rules decide which. Pure, because "why am I looking at the wrong app" is the kind of
+// islands from separate bundles — announces itself on the same bus. The panel follows exactly one
+// of them; which one is follow.ts. Pure, because "why am I looking at the wrong app" is the kind of
 // question that deserves a test rather than a guess.
 
 export interface Source {
@@ -21,14 +21,17 @@ export interface Source {
   lastSeen: number;
 }
 
+/** What a hello did to the list: a page it did not know, or one it knew saying hello again. */
+export type Heard = { type: 'arrived'; id: string } | { type: 'refreshed'; id: string };
+
 /** Fold a hello into the known sources, refreshing one we've met before rather than duplicating it. */
-export function trackSources(
+export function hearHello(
   sources: readonly Source[],
   hello: HelloMessage,
   now: number,
-): readonly Source[] {
+): { sources: readonly Source[]; heard: Heard | null } {
   // `from` is the page's id — it is on every message it sends, so a hello needs no id of its own.
-  if (!hello.from) return sources;
+  if (!hello.from) return { sources, heard: null };
   const next: Source = {
     id: hello.from,
     url: hello.url,
@@ -38,36 +41,18 @@ export function trackSources(
     agentVersion: hello.agentVersion,
     lastSeen: now,
   };
-  return sources.some((s) => s.id === next.id)
-    ? sources.map((s) => (s.id === next.id ? next : s))
-    : [...sources, next];
-}
-
-// The id to follow, in order of respect for what the user meant:
-//   1. an explicit choice, while that page is still around
-//   2. the url they were following before — a reload gives a new id, so the url is what survives
-//   3. the first page we heard from
-// A url can have several sources — the dead page stays listed after a reload — so a url resolves to
-// the one heard from last. A panel opened for a url (`waitForUrl`) follows nothing else while it
-// waits: a page reads nothing until a panel asks it by name, and asking another would wake it.
-export function chooseSource(
-  sources: readonly Source[],
-  chosenId: string | null,
-  rememberedUrl: string | null,
-  { waitForUrl = false }: { waitForUrl?: boolean } = {},
-): string | null {
-  if (chosenId && sources.some((s) => s.id === chosenId)) return chosenId;
-  if (rememberedUrl) {
-    const byUrl = latestAt(sources, rememberedUrl);
-    if (byUrl) return byUrl.id;
-    if (waitForUrl) return null;
+  if (!sources.some((s) => s.id === next.id)) {
+    return { sources: [...sources, next], heard: { type: 'arrived', id: next.id } };
   }
-  const first = sources[0];
-  if (!first) return null;
-  return first.url ? (latestAt(sources, first.url) ?? first).id : first.id;
+  return {
+    sources: sources.map((s) => (s.id === next.id ? next : s)),
+    heard: { type: 'refreshed', id: next.id },
+  };
 }
 
-function latestAt(sources: readonly Source[], url: string): Source | undefined {
+// A url can have several sources — the dead page stays listed after a reload — so a url resolves to
+// the one heard from last.
+export function latestAt(sources: readonly Source[], url: string): Source | undefined {
   return sources
     .filter((s) => s.url === url)
     .reduce<Source | undefined>(
