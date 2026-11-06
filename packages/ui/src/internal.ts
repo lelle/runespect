@@ -51,6 +51,8 @@ export {
 export { lastSeenLabel, sourceDetails, sourceLabel } from './sources';
 export type { Source } from './sources';
 export { gapWarner, hearNumber, REPAIR_ATTEMPTS } from './numbering';
+export { panelHeard } from './panel-step';
+export type { HeardStep } from './panel-step';
 export type { Gap, NumberStep, Numbers } from './numbering';
 export { startFollowing, follow, followedIdOf } from './follow';
 export type { Focus, Following, FollowEvent, FollowStep, PageFacts, Why } from './follow';
