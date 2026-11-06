@@ -11,7 +11,6 @@ import {
 } from './protocol/internal';
 import {
   allInOrder,
-  bump,
   find,
   setWatching,
   startReadingAll,
@@ -24,8 +23,8 @@ import { recordCommit } from './history';
 
 export const WIRE_DEPTH = 1;
 
-// The whole tree only when a listener asks for it: a transport needs it once, for its first message.
-type FlushListener = (tree: () => SerializedNode[], ops: TreeOp[], commit: Commit | null) => void;
+// A transport sends its first tree itself, when a panel asks for it; after that, what changed.
+type FlushListener = (ops: TreeOp[], commit: Commit | null) => void;
 
 // One watcher per page, however many transports are connected: the plugin connects both the window
 // and the HMR channel, and a flush is still one thing that happened. It is diffed and recorded
@@ -36,9 +35,7 @@ let stopWatching: (() => void) | null = null;
 
 export function watchFlushes(listener: FlushListener): () => void {
   flushListeners.add(listener);
-  if (stopWatching) {
-    bump(); // the watcher only reruns on a change, and a new transport needs its first tree now
-  } else {
+  if (!stopWatching) {
     // The tree as it is now, so a change before the first flush is a change and not the baseline.
     let last: Map<number, SerializedNode> | null = indexById(untrack(() => serialize(WIRE_DEPTH)));
     setWatching(true);
@@ -62,8 +59,7 @@ export function watchFlushes(listener: FlushListener): () => void {
             else last.set(op.node.id, op.node);
           }
         }
-        const tree = last;
-        for (const flush of flushListeners) flush(() => [...tree.values()], ops, commit);
+        for (const flush of flushListeners) flush(ops, commit);
       });
     });
   }

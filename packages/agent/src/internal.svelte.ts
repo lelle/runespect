@@ -7,6 +7,7 @@
 //   observe.ts           the event log of every hop
 //   page-actions.ts      highlight, pick, and the console actions
 //   surface.ts           window.__runespect
+//   link.ts              what a page does for the panels that hear it, as steps
 //   transport.svelte.ts  connect(), broadcast() and the window and dev-server channels
 import { resetTree } from './tree.svelte';
 import { resetHistory } from './history';
@@ -59,6 +60,8 @@ export {
   openInEditor,
 } from './transport.svelte';
 export type { HotChannel } from './transport.svelte';
+export { startLink, linkStep } from './link';
+export type { Link, LinkEffect, LinkEvent, LinkStep } from './link';
 
 // A reset agent is the agent of a page that has just loaded: what each part started is stopped, in
 // the reverse order the parts build on each other, and each part's data is replaced.
