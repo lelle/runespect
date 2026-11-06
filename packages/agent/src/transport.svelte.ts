@@ -8,6 +8,7 @@ import {
   hydrateMessage,
   helloMessage,
   historyMessage,
+  byeMessage,
   type SourceIdentity,
   type ToPanelMessage,
   PROTOCOL_VERSION,
@@ -67,7 +68,34 @@ function identity(): SourceIdentity {
   return {
     url: `${location.pathname}${redactQuery(location.search)}`,
     title: typeof document === 'undefined' ? undefined : document.title,
+    ...(typeof document !== 'undefined' && { visible: document.visibilityState === 'visible' }),
   };
+}
+
+// A tab a panel watched keeps the id of its page in sessionStorage, which belongs to the tab and
+// survives a reload, so the next page in the tab can say which page it replaces. Read once per page
+// load, before any connection writes its own: a page connected twice (the extension and the dev
+// server) names the page before it in both. Storage that is missing or throws names none.
+const PAGE_KEY = '__runespect_page';
+let pageBefore: string | null | undefined;
+function previousPage(): string | null {
+  if (pageBefore === undefined) {
+    try {
+      const found = globalThis.sessionStorage?.getItem(PAGE_KEY) ?? null;
+      // A page cannot replace itself: its own id is from a connection made again in this load.
+      pageBefore = found === SOURCE_ID ? null : found;
+    } catch {
+      pageBefore = null;
+    }
+  }
+  return pageBefore;
+}
+function rememberPage(): void {
+  try {
+    globalThis.sessionStorage?.setItem(PAGE_KEY, SOURCE_ID);
+  } catch {
+    // Without storage the next page names none; this one still says bye.
+  }
 }
 
 // Every live connection, so reset() can end them.
@@ -103,10 +131,11 @@ export function connect(transport: Transport): () => void {
 
   // Live: this tree comes from the app's own instrumentation, so the panel can offer edits,
   // highlighting and the picker.
-  const hello = (page: SourceIdentity): void =>
+  const hello = (page: SourceIdentity, replaces?: string): void =>
     send(
       helloMessage(PROTOCOL_VERSION, 0, {
         ...page,
+        ...(replaces && { replaces }),
         agentVersion: version,
         ...(editorLinks.on ? {} : { openInEditor: false as const }),
       }),
@@ -114,7 +143,7 @@ export function connect(transport: Transport): () => void {
 
   // link.ts decides; this carries it out. A flush's ops are only known inside the flush. The link
   // starts before the transport is listened to, which may hand over what it holds at once.
-  const started = startLink(identity());
+  const started = startLink(identity(), previousPage());
   let link: Link = started.link;
   let stop: (() => void) | null = null;
   let stopWatchingPage: (() => void) | null = null;
@@ -129,7 +158,7 @@ export function connect(transport: Transport): () => void {
   ): void => {
     switch (effect.do) {
       case 'hello':
-        return hello(effect.page);
+        return hello(effect.page, effect.replaces);
       case 'tree':
         return send(treeMessage(serialize(WIRE_DEPTH)));
       case 'ops':
@@ -143,6 +172,10 @@ export function connect(transport: Transport): () => void {
         return;
       case 'watch-page':
         return watchPage();
+      case 'remember':
+        return rememberPage();
+      case 'bye':
+        return send(byeMessage());
       case 'stop':
         stop?.();
         stopWatchingPage?.();
@@ -157,8 +190,10 @@ export function connect(transport: Transport): () => void {
   };
 
   // An app that navigates on the client stays the same page under a new url, and its title often
-  // follows a moment later; the link says hello again so the panel lists it as it is now. The
-  // Navigation API tells of every history change without wrapping the app's own history.pushState.
+  // follows a moment later; the link says hello again so the panel lists it as it is now, and when
+  // the tab is shown or hidden. The Navigation API tells of every history change without wrapping
+  // the app's own history.pushState. The page going, and coming back from the back/forward cache,
+  // are told by pagehide and pageshow.
   const watchPage = (): void => {
     if (stopWatchingPage || typeof document === 'undefined') return;
     // Looked at after the turn, so a navigation and the title it sets a moment later make one
@@ -166,17 +201,27 @@ export function connect(transport: Transport): () => void {
     let seen = '';
     const check = (): void =>
       queueMicrotask(() => {
-        const raw = `${location.pathname}${location.search}\n${document.title}`;
+        const raw = `${location.pathname}${location.search}\n${document.title}\n${document.visibilityState}`;
         if (raw === seen) return;
         seen = raw;
         step({ type: 'page', page: identity() });
       });
+    const hidden = (): void => step({ type: 'pagehide' });
+    const shown = (e: Event): void => {
+      if ((e as PageTransitionEvent).persisted) step({ type: 'pageshow', page: identity() });
+    };
     const navigation = (globalThis as { navigation?: EventTarget }).navigation;
     navigation?.addEventListener('currententrychange', check);
+    document.addEventListener('visibilitychange', check);
+    window.addEventListener('pagehide', hidden);
+    window.addEventListener('pageshow', shown);
     const titles = new MutationObserver(check);
     titles.observe(document.head, { subtree: true, childList: true, characterData: true });
     stopWatchingPage = () => {
       navigation?.removeEventListener('currententrychange', check);
+      document.removeEventListener('visibilitychange', check);
+      window.removeEventListener('pagehide', hidden);
+      window.removeEventListener('pageshow', shown);
       titles.disconnect();
     };
   };
@@ -193,6 +238,8 @@ export function connect(transport: Transport): () => void {
     if (msg.to && msg.to !== SOURCE_ID) return;
     if (msg.kind === 'edit') setValue(msg.id, msg.symbol, msg.value, msg.path ?? []);
     else if (msg.kind === 'request') step({ type: 'request', toSelf: !!msg.to, page: identity() });
+    // A ping is always for one page; one for no page in particular is not ours to answer.
+    else if (msg.kind === 'ping' && msg.to) step({ type: 'ping', page: identity() });
     else if (msg.kind === 'highlight') highlight(msg.id);
     else if (msg.kind === 'pick') {
       if (msg.active) startPick((id) => send(pickedMessage(id)));
@@ -344,5 +391,6 @@ export function pageChannel(): HotChannel {
 
 export function resetTransport(): void {
   for (const disconnect of [...connections]) disconnect();
+  pageBefore = undefined;
   editorLinks.on = true;
 }

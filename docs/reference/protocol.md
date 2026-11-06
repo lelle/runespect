@@ -114,24 +114,44 @@ Escape answers `picked` with `id: null`. `pick` with `active: false` ends a pick
 ### `hello`
 
 Page to panel. Who the page is and which version it speaks. Sent when the agent connects, as the
-answer to every `request`, and, once a panel has asked, again whenever the page's url or title
-changes (an app that navigates on the client, followed through the Navigation API).
+answer to every `request` and `ping`, and, once a panel has asked, again whenever the page's url,
+title or visibility changes (an app that navigates on the client, followed through the Navigation
+API), and when it comes back from the back/forward cache.
 
-| Field          | Type      | Meaning                                                                     |
-| -------------- | --------- | --------------------------------------------------------------------------- |
-| `version`      | `number`  | the page's `PROTOCOL_VERSION`; the panel warns when it differs from its own |
-| `tier`         | `0 \| 2`  | `0` from the agent, `2` from the capture; absent means Names only           |
-| `problem`      | `string?` | why a capture recorded nothing                                              |
-| `url`          | `string?` | path and query, with secret-looking query values replaced by `…`            |
-| `title`        | `string?` | the page's `document.title`                                                 |
-| `openInEditor` | `false?`  | present when the app turned Open in editor off                              |
-| `agentVersion` | `string?` | the agent's package version, such as `0.2.0`                                |
+| Field          | Type       | Meaning                                                                     |
+| -------------- | ---------- | --------------------------------------------------------------------------- |
+| `version`      | `number`   | the page's `PROTOCOL_VERSION`; the panel warns when it differs from its own |
+| `tier`         | `0 \| 2`   | `0` from the agent, `2` from the capture; absent means Names only           |
+| `problem`      | `string?`  | why a capture recorded nothing                                              |
+| `url`          | `string?`  | path and query, with secret-looking query values replaced by `…`            |
+| `title`        | `string?`  | the page's `document.title`                                                 |
+| `openInEditor` | `false?`   | present when the app turned Open in editor off                              |
+| `agentVersion` | `string?`  | the agent's package version, such as `0.2.0`                                |
+| `visible`      | `boolean?` | whether the tab is shown (`document.visibilityState`)                       |
+| `replaces`     | `string?`  | the page before this one in the same tab, which a panel watched             |
+
+A page a panel has spoken to (a `request` or a `ping`) is watched: it keeps its id in the tab's
+`sessionStorage` under `__runespect_page`, which survives a reload. The next page in the tab finds
+it, names it in its first hello as `replaces`, and is watched from the start. A tab no panel spoke
+to writes nothing. Storage that is missing or throws names no page before.
 
 ### `request`
 
 Panel to page. No fields of its own. Without `to` it asks who is there, and every page answers with
 a `hello`. With `to`, or from a transport the page already serves (a reconnect), the page also starts
 following its flushes and sends a `tree`.
+
+### `ping`
+
+Panel to page, always with `to`; a page ignores one without it. A page with the agent answers with a
+`hello` and is watched from then on, but does not follow its flushes or send a tree. The capture and
+the extension's Names only walk do not answer: they say no `bye` or `replaces` either, so the panel
+has nothing to ask them.
+
+### `bye`
+
+Page to panel. No fields of its own. A watched page sends it in `pagehide`: a reload, a close,
+navigating away, or going into the back/forward cache.
 
 ### `tree`
 

@@ -86,6 +86,19 @@ export interface RequestMessage extends ToSource {
   kind: 'request';
 }
 
+/** Panel → page: say hello and watch your url and title, without following. Answered with a hello. */
+export interface PingMessage {
+  source: typeof SOURCE;
+  kind: 'ping';
+  to: string;
+}
+
+/** Page → panel: a page that a panel watched is going (reload, close, navigating away). */
+export interface ByeMessage extends FromSource {
+  source: typeof SOURCE;
+  kind: 'bye';
+}
+
 // Incremental tree updates: a delta of node changes since the last send, so a busy
 // app sends only what changed instead of re-broadcasting the whole tree. add/update carry
 // the full node (each node owns its children/parent, so a structural change shows up as an
@@ -189,12 +202,17 @@ export interface HelloMessage extends FromSource {
   openInEditor?: false;
   /** The agent's package version, so a tab still running an older one can be told apart. */
   agentVersion?: string;
+  /** Whether the tab is shown, so a panel choosing a page can take the one in front of the user. */
+  visible?: boolean;
+  /** The page before this one in the same tab, which a panel watched: this page load replaces it. */
+  replaces?: string;
 }
 
 /** How a page describes itself in the handshake. Its id is `from`, on everything it sends. */
 export interface SourceIdentity {
   url?: string;
   title?: string;
+  visible?: boolean;
 }
 
 export type Message =
@@ -211,13 +229,23 @@ export type Message =
   | StoreGlobalMessage
   | InspectMessage
   | HydrateMessage
-  | HelloMessage;
+  | HelloMessage
+  | PingMessage
+  | ByeMessage;
 
 // ── Message direction (an invariant the compiler enforces) ──
 // The window transport echoes a sender's own messages back to its own listener, so a `kind` that
 // is both SENT and HANDLED by the same side loops forever. Each kind
 // belongs to exactly one direction; a side only HANDLES the opposite direction's kinds.
-export const TO_PANEL_KINDS = ['tree', 'ops', 'picked', 'hydrate', 'hello', 'history'] as const; // agent → panel
+export const TO_PANEL_KINDS = [
+  'tree',
+  'ops',
+  'picked',
+  'hydrate',
+  'hello',
+  'history',
+  'bye',
+] as const; // agent → panel
 export const TO_PAGE_KINDS = [
   'request',
   'edit',
@@ -227,6 +255,7 @@ export const TO_PAGE_KINDS = [
   'storeGlobal',
   'inspect',
   'history-request',
+  'ping',
 ] as const; // panel → agent
 
 export type ToPanelMessage = Extract<Message, { kind: (typeof TO_PANEL_KINDS)[number] }>;
@@ -324,6 +353,14 @@ export function requestMessage(): RequestMessage {
   return { source: SOURCE, kind: 'request' };
 }
 
+export function pingMessage(to: string): PingMessage {
+  return { source: SOURCE, kind: 'ping', to };
+}
+
+export function byeMessage(): ByeMessage {
+  return { source: SOURCE, kind: 'bye' };
+}
+
 export function opsMessage(ops: TreeOp[], commit: number, t: number): OpsMessage {
   return { source: SOURCE, kind: 'ops', ops, commit, t };
 }
@@ -368,7 +405,7 @@ export function hydrateMessage(
 export function helloMessage(
   version: number,
   tier?: 0 | 2,
-  identity?: SourceIdentity & Pick<HelloMessage, 'openInEditor' | 'agentVersion'>,
+  identity?: SourceIdentity & Pick<HelloMessage, 'openInEditor' | 'agentVersion' | 'replaces'>,
 ): HelloMessage {
   return { source: SOURCE, kind: 'hello', version, ...(tier != null && { tier }), ...identity };
 }
