@@ -20,6 +20,11 @@ const metaFile = (el: Element): string | undefined =>
 const metaLine = (el: Element): number | undefined =>
   (el as unknown as { __svelte_meta?: SvelteMeta }).__svelte_meta?.loc?.line;
 
+// A shared component is expanded under every parent, so components that all hold each other multiply
+// the paths: a page built that way made the walk, and the tab, run out of memory. The walk is told to
+// stop here (it runs in the page every second) and says so with one last node.
+export const MAX_NODES = 10_000;
+
 export function componentsFromSvelteMeta(root: Element): SerializedNode[] {
   // file -> { line, children: set of component files contained directly within it }
   const info = new Map<string, { line: number; children: Set<string> }>();
@@ -56,6 +61,7 @@ export function componentsFromSvelteMeta(root: Element): SerializedNode[] {
 
   const nodes: SerializedNode[] = [];
   let seq = 0;
+  let cut = false;
   const visit = (file: string, parent: number | null, path: Set<string>): number => {
     const id = ++seq;
     const r = info.get(file)!;
@@ -72,10 +78,32 @@ export function componentsFromSvelteMeta(root: Element): SerializedNode[] {
     nodes.push(node);
     const next = new Set(path).add(file);
     for (const childFile of r.children) {
-      if (!next.has(childFile)) node.children.push(visit(childFile, id, next));
+      if (next.has(childFile)) continue;
+      if (nodes.length >= MAX_NODES) {
+        cut = true;
+        break;
+      }
+      node.children.push(visit(childFile, id, next));
     }
     return id;
   };
-  for (const f of roots) visit(f, null, new Set());
+  for (const f of roots) {
+    if (nodes.length >= MAX_NODES) {
+      cut = true;
+      break;
+    }
+    visit(f, null, new Set());
+  }
+  if (cut) {
+    nodes.push({
+      id: ++seq,
+      name: `… cut at ${MAX_NODES} components`,
+      parent: null,
+      children: [],
+      values: {},
+      snippets: [],
+      writable: [],
+    });
+  }
   return nodes;
 }
