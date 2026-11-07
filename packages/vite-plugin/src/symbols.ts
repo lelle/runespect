@@ -358,6 +358,11 @@ function collectRunes(program: any) {
           if (node.kind !== 'const') reassignableStates.push(d.id.name);
         } else if (base === DERIVED) deriveds.push(d.id.name);
         else if (base === 'getContext') contexts.push(d.id.name);
+      } else if (base === STATE) {
+        // `let { a, b } = $state(…)`: each name is a variable of its own, set the same way.
+        const names = patternNames(d.id, false);
+        states.push(...names);
+        if (node.kind !== 'const') reassignableStates.push(...names);
       }
     }
   }
@@ -462,16 +467,19 @@ function topLevelNames(program: any): string[] {
   return names;
 }
 
-function patternNames(pattern: any): string[] {
+// The names a pattern declares. `rest: false` leaves out `...rest` elements, which hold a copy of
+// what the others did not take and are not reported.
+function patternNames(pattern: any, rest = true): string[] {
   if (!pattern) return [];
+  const names = (p: any) => patternNames(p, rest);
   if (pattern.type === 'Identifier') return [pattern.name];
   if (pattern.type === 'ObjectPattern')
     return pattern.properties.flatMap((p: any) =>
-      patternNames(p.type === 'RestElement' ? p.argument : p.value),
+      p.type === 'RestElement' ? (rest ? names(p.argument) : []) : names(p.value),
     );
-  if (pattern.type === 'ArrayPattern') return pattern.elements.flatMap(patternNames);
-  if (pattern.type === 'AssignmentPattern') return patternNames(pattern.left);
-  if (pattern.type === 'RestElement') return patternNames(pattern.argument);
+  if (pattern.type === 'ArrayPattern') return pattern.elements.flatMap(names);
+  if (pattern.type === 'AssignmentPattern') return names(pattern.left);
+  if (pattern.type === 'RestElement') return rest ? names(pattern.argument) : [];
   return [];
 }
 

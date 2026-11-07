@@ -93,7 +93,7 @@ warning once.
 
 ## What is reported
 
-- **Runes mode:** `$state`, `$derived`, `$props()` (destructured or as one object), fields of a
+- **Runes mode:** `$state` (also destructured, name by name; a `...rest` element is left out), `$derived`, `$props()` (destructured or as one object), fields of a
   local class that declares `$state` or `$derived`, collections made with `new` from
   `svelte/reactivity` (`SvelteSet`, `SvelteMap`, …), store reads (`$store`), `getContext(...)`
   results, and the values passed to `setContext(key, value)`.
