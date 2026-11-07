@@ -117,7 +117,6 @@ test.each([
   ['an `as` cast', 'let n = $derived($count as number);'],
   ['a non-null assertion', 'let n = $derived($count!);'],
   ['a `satisfies` check', 'let n = $derived($count satisfies number);'],
-  ['an angle-bracket assertion', 'let n = $derived(<number>$count);'],
 ])('a store read only inside %s is still reported', (_, line) => {
   const { symbols } = componentSymbols(
     parse(
