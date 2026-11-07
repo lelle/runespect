@@ -112,6 +112,41 @@ const q = $state({ $in: [1] });
   expect(report(symbols)).toEqual({ kinds: { q: 'state', $count: 'store' }, writable: [] });
 });
 
+// The only read of the store sits inside a TypeScript wrapper; the wrapper hides nothing at runtime.
+test.each([
+  ['an `as` cast', 'let n = $derived($count as number);'],
+  ['a non-null assertion', 'let n = $derived($count!);'],
+  ['a `satisfies` check', 'let n = $derived($count satisfies number);'],
+  ['an angle-bracket assertion', 'let n = $derived(<number>$count);'],
+])('a store read only inside %s is still reported', (_, line) => {
+  const { symbols } = componentSymbols(
+    parse(
+      `<script lang="ts">
+import { writable } from 'svelte/store';
+const count = writable(0);
+${line}
+</script>`,
+      { modern: true },
+    ),
+  );
+  expect(symbols).toContainEqual({ symbol: '$count', kind: 'store', read: '$count' });
+});
+
+test('a $-name that appears only in a type is not a store read', () => {
+  const { symbols } = componentSymbols(
+    parse(
+      `<script lang="ts">
+import { writable } from 'svelte/store';
+const count = writable(0);
+let n: typeof $count | undefined = undefined;
+let m = 1 as $count;
+</script>`,
+      { modern: true },
+    ),
+  );
+  expect(symbols.filter((s) => s.kind === 'store')).toEqual([]);
+});
+
 test('a context read is reported; setContext calls fold into one read-only `provided`', () => {
   const { symbols } = componentSymbols(
     parse(

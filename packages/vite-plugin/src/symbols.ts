@@ -212,13 +212,28 @@ function collectLegacy(program: any) {
   return { props, states, deriveds };
 }
 
+// TS nodes are types, except the wrappers around an expression that still runs: `$s as T`, `$s!`,
+// `$s satisfies T`, `<T>$s`, `$s<T>`. Their type child is a type node and is skipped on its own.
+const TS_EXPRESSION_WRAPPERS = new Set([
+  'TSAsExpression',
+  'TSNonNullExpression',
+  'TSSatisfiesExpression',
+  'TSTypeAssertion',
+  'TSInstantiationExpression',
+]);
+function isTypeNode(n: any): boolean {
+  return (
+    typeof n.type === 'string' && n.type.startsWith('TS') && !TS_EXPRESSION_WRAPPERS.has(n.type)
+  );
+}
+
 // Detect store auto-subscriptions: `$foo` read where `foo` is declared or imported at the top of the
 // component. Keys, member names and types that merely start with `$` are not stores.
 function collectStores(program: any, fragment: any, moduleProgram?: any): string[] {
   const declared = new Set([...topLevelNames(program), ...topLevelNames(moduleProgram)]);
   const names = new Set<string>();
   const collect = (n: any, parent: any, key: string): boolean => {
-    if (typeof n.type === 'string' && n.type.startsWith('TS')) return false;
+    if (isTypeNode(n)) return false;
     if (
       n.type === 'Identifier' &&
       /^\$[A-Za-z_][\w$]*$/.test(n.name) &&
