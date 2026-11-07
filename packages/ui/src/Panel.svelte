@@ -204,7 +204,7 @@
     applyHeard(panelStep({ following, numbers, repair }, { type: 'pick', id }, Date.now()));
   }
 
-  // ── which source is feeding us ──
+  // ── which tier is feeding us ──
   // The page names its tier in the handshake; a tree that arrives without one is the extension's
   // names-only DOM walk. We wait GRACE_MS before saying so, since a slow plugin page can lose the race
   // to the names-only walk's first broadcast and would otherwise flash a warning it doesn't deserve.
