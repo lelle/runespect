@@ -39,9 +39,9 @@
   import CommitDetail from './CommitDetail.svelte';
   import { panelStatus } from './status';
   import { lastSeenLabel, sourceDetails, sourceLabel } from './sources';
-  import { startFollowing, follow, followedIdOf, listedSources, type FollowStep } from './follow';
-  import type { Gap, Numbers } from './numbering';
-  import { panelHeard, panelStep, repairDue, type HeardStep, type Repair } from './panel-step';
+  import { startFollowing, followedIdOf, listedSources } from './follow';
+  import type { Gap } from './numbering';
+  import { Session } from './session';
   import { EMPTY, hold, shown, type Held } from './held';
   import Tree from './Tree.svelte';
   import Detail from './Detail.svelte';
@@ -155,37 +155,26 @@
     );
   });
 
-  function apply(step: FollowStep): void {
-    following = step.state;
-    if (step.switched) forgetPage();
-    for (const message of step.send) transport.send(message);
-    if (step.deliver) show(step.deliver);
-    for (const { id, at } of step.timers)
-      later(at, () =>
-        applyHeard(panelStep({ following, numbers, repair }, { type: 'timeout', id }, Date.now())),
-      );
-  }
-
-  // A page that said bye is kept for a wait; follow.ts says when it ends, the view keeps the time.
-  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- non-reactive bookkeeping
-  const pending = new Set<ReturnType<typeof setTimeout>>();
-  function later(at: number, run: () => void): void {
-    const handle = setTimeout(
-      () => {
-        pending.delete(handle);
-        // Early by the clock (it stepped back, or the timer ran a little early): not due yet.
-        if (Date.now() < at) later(at, run);
-        else run();
-      },
-      Math.max(0, at - Date.now()),
-    );
-    pending.add(handle);
-  }
-  $effect(() => () => pending.forEach(clearTimeout));
+  // What the panel does with what it hears, and with the timers that follow, is session.ts; the view
+  // gives it the transport, a timer and the places it shows things.
+  const session = new Session(start, {
+    send: (message) => transport.send(message),
+    show: (message) => show(message),
+    forget: () => forgetPage(),
+    // To onGap and not to a console: the panel can run in the inspected page.
+    gap: (gap) => onGap?.(gap),
+    changed: (next) => (following = next),
+    now: () => Date.now(),
+    timer: (ms, run) => {
+      const handle = setTimeout(run, ms);
+      return () => clearTimeout(handle);
+    },
+  });
+  $effect(() => () => session.dispose());
 
   // Every command goes to the page we follow, addressed by follow.ts.
   function send(message: ToPageMessage): void {
-    apply(follow(following, { type: 'command', msg: message }, Date.now()));
+    session.command(message);
   }
 
   // The tree and the history belong to the page we were following; drop them rather than blend two
@@ -201,7 +190,7 @@
 
   function pickSource(id: string): void {
     sourcesOpen = false;
-    applyHeard(panelStep({ following, numbers, repair }, { type: 'pick', id }, Date.now()));
+    session.pick(id);
   }
 
   // ── which tier is feeding us ──
@@ -276,31 +265,16 @@
     else if (msg.kind === 'opened' && !msg.ok) notice.show(UNREACHABLE_NOTICE);
   }
 
-  // ── messages lost on the way ──
-  // Not state: nothing on screen shows it.
-  let numbers: Numbers = new Map();
-  let repair: Repair | null = null;
-
-  function applyHeard(step: HeardStep): void {
-    numbers = step.side.numbers;
-    repair = step.side.repair;
-    // To onGap and not to a console: the panel can run in the inspected page.
-    if (step.gap) onGap?.(step.gap);
-    if (step.repairAt !== null) {
-      later(step.repairAt, () => applyHeard(repairDue({ following, numbers, repair }, Date.now())));
-    }
-    apply(step);
-  }
   $effect(() => {
     const off = transport.onMessage?.((msg) => {
       if (!isRunespectMessage(msg)) return;
       if (!isToPanel(msg)) return; // panel only handles agent→panel kinds (compiler-enforced)
-      applyHeard(panelHeard({ following, numbers, repair }, msg, Date.now()));
+      session.hear(msg);
     });
     return off;
   });
   // Ask who is there once the listener above is in place, so no answer is missed.
-  $effect(() => untrack(() => start.send.forEach((message) => transport.send(message))));
+  $effect(() => untrack(() => session.begin()));
 
   function onEdit(id: number, symbol: string, path: (string | number)[], value: unknown): void {
     send(editMessage(id, symbol, value, path));
