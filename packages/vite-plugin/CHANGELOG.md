@@ -1,5 +1,15 @@
 # @runespect/vite-plugin
 
+## 0.2.1
+
+### Patch Changes
+
+- [#40](https://github.com/lelle/runespect/pull/40) [`1e0e03d`](https://github.com/lelle/runespect/commit/1e0e03dda9583ab050076c4461585d02e032169c) Thanks [@lelle](https://github.com/lelle)! - Every message a page sends carries a number, one more than the last. A panel that hears a number skipped knows a message was lost on the way: it records a `gap` (in the extension's event log; the panel window warns once per page in its own console), and asks the page it follows for its tree and history again, so what it shows matches the page.
+
+- [#45](https://github.com/lelle/runespect/pull/45) [`612ccdd`](https://github.com/lelle/runespect/commit/612ccddb88dcff4545827f0492aacf9ab0967c93) Thanks [@lelle](https://github.com/lelle)! - Open in editor works with any editor: it asks the dev server to open the file through Vite's `/__open-in-editor`, which opens the editor `LAUNCH_EDITOR` or `EDITOR` names, so WebStorm, Rider, Zed and others work as well as VS Code. A notice says so for 3 seconds, and where to look if nothing opens. `runespect({ openInEditor: 'vscode' })` keeps the `vscode://` links, for a dev server on another machine.
+- Updated dependencies [[`9539987`](https://github.com/lelle/runespect/commit/95399878cb4581ca46cc497220cf88d0288b1b1b), [`1e0e03d`](https://github.com/lelle/runespect/commit/1e0e03dda9583ab050076c4461585d02e032169c), [`612ccdd`](https://github.com/lelle/runespect/commit/612ccddb88dcff4545827f0492aacf9ab0967c93), [`d483abc`](https://github.com/lelle/runespect/commit/d483abc568325586d627a31d26b98e3f99ade8d9), [`91cb58a`](https://github.com/lelle/runespect/commit/91cb58a02e9cec297063a95374d2d9e77d1b6bff), [`f1cf34f`](https://github.com/lelle/runespect/commit/f1cf34f2461cbd51fd493d19f5ae6624f5c82873), [`65e243a`](https://github.com/lelle/runespect/commit/65e243ad2028d6bd2a18d64a88df4a9b398dc6fd)]:
+  - @runespect/agent@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes
