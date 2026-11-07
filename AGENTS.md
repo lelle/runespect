@@ -4,6 +4,10 @@ runespect is a Svelte 5 devtools: a Vite plugin instruments components, an agent
 the tree, and the panel renders it: in a window the dev server serves, in an overlay, or in a Chrome
 DevTools tab. See [`docs/reference/packages.md`](docs/reference/packages.md#the-repository) for the
 layout and [`docs/explanation/architecture.md`](docs/explanation/architecture.md) for the design.
+[`docs/explanation/vocabulary.md`](docs/explanation/vocabulary.md) says what the words mean ("source"
+has four meanings) and
+[`docs/reference/protocol.md`](docs/reference/protocol.md#which-page-the-panel-follows) lists what page
+and panel do in each situation.
 
 ## Debugging — start here
 
