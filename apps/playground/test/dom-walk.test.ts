@@ -111,3 +111,25 @@ test('a snippet passed to a child does not leave the tree without a root', () =>
   expect(nodes[0].parent).toBeNull();
   expect(nodes[1].parent).toBe(nodes[0].id);
 });
+
+// Every component of one level holds every component of the next: the tree has one path per choice at
+// each level, 2^levels in all. Leaves are enough to say "this file sits inside that one".
+test('a diamond of shared components is cut at a cap, not expanded without end', () => {
+  const levels = 16;
+  const root = document.createElement('div');
+  for (let n = 0; n < levels; n++) {
+    for (const side of ['a', 'b']) {
+      const holder = withMeta('div', `src/L${n}${side}.svelte`, 1);
+      for (const next of ['a', 'b']) holder.append(withMeta('i', `src/L${n + 1}${next}.svelte`, 1));
+      root.append(holder);
+    }
+  }
+
+  const started = performance.now();
+  const nodes = componentsFromSvelteMeta(root);
+
+  expect(performance.now() - started).toBeLessThan(2000);
+  expect(nodes.length).toBeLessThanOrEqual(10_001); // the cap, and the node that says it was hit
+  expect(nodes.at(-1)!.name).toMatch(/cut/);
+  expect(nodes.at(-1)!.parent).toBeNull();
+});
