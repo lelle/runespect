@@ -14,15 +14,10 @@ import {
   followedIdOf,
   hold,
   listedSources,
-  panelHeard,
-  panelStep,
-  repairDue,
+  Session,
   startFollowing,
-  type FollowStep,
   type Gap,
-  type HeardStep,
   type Held,
-  type PanelSide,
 } from '@runespect/ui/internal';
 import { node } from './panel';
 
@@ -55,7 +50,7 @@ interface Tab {
 }
 
 interface PanelView {
-  side: PanelSide;
+  session: Session;
   held: Held;
 }
 
@@ -156,44 +151,10 @@ export function simulate(options: SimOptions = {}) {
     }
   }
 
-  function later(at: number, what: string, run: () => void): void {
-    timers.push({ at, what, run });
-    timers.sort((a, b) => a.at - b.at);
-  }
-
-  // As <Panel> applies a step: the new focus, what it asks, what it shows, and its timers.
-  function panelApplies(step: FollowStep): void {
-    const p = panel!;
-    p.side = { ...p.side, following: step.state };
-    if (step.switched) p.held = EMPTY;
-    panelSends(step.send);
-    const shown = step.deliver;
-    // As <Panel> does: an empty tree does not blank one it already holds.
-    if (shown?.kind === 'tree' && (shown.nodes.length || p.held.sent.length === 0))
-      p.held = hold(p.held, { type: 'tree', nodes: shown.nodes }).state;
-    else if (shown?.kind === 'ops') {
-      p.held = hold(p.held, { type: 'ops', ops: shown.ops, commit: shown.commit, t: 0 }).state;
-    }
-    for (const { id, at } of step.timers) {
-      later(at, `wait for ${id}`, () =>
-        panelHearsStep(panelStep(panel!.side, { type: 'timeout', id }, clock)),
-      );
-    }
-  }
-
-  function panelHearsStep(step: HeardStep): void {
-    const p = panel!;
-    p.side = step.side;
-    if (step.gap) gaps.push(step.gap);
-    if (step.repairAt !== null) {
-      later(step.repairAt, 'repair', () => panelHearsStep(repairDue(panel!.side, clock)));
-    }
-    panelApplies(step);
-  }
-
-  const followed = (): string | null => (panel ? followedIdOf(panel.side.following) : null);
-  const known = (): string[] => panel?.side.following.sources.map((s) => s.id) ?? [];
-  const rows = (): string[] => (panel ? listedSources(panel.side.following).map((s) => s.id) : []);
+  const followed = (): string | null => (panel ? followedIdOf(panel.session.following) : null);
+  const known = (): string[] => panel?.session.following.sources.map((s) => s.id) ?? [];
+  const rows = (): string[] =>
+    panel ? listedSources(panel.session.following).map((s) => s.id) : [];
   const alive = (): Tab[] => tabs.filter((t) => t.alive);
   const tab = (id: string): Tab => tabs.find((t) => t.id === id)!;
 
@@ -263,9 +224,7 @@ export function simulate(options: SimOptions = {}) {
     const { from, to } = all[pick % all.length];
     if (to === 'panel') {
       const msg = up.get(from)!.shift()!;
-      act(`  ${from} → panel: ${msg.kind} n${msg.n}`, () =>
-        panelHearsStep(panelHeard(panel!.side, msg, clock)),
-      );
+      act(`  ${from} → panel: ${msg.kind} n${msg.n}`, () => panel!.session.hear(msg));
     } else {
       const msg = down.get(to.id)!.shift()!;
       act(`  panel → ${to.id}: ${msg.kind}${msg.to ? ` to ${msg.to}` : ''}`, () =>
@@ -300,11 +259,41 @@ export function simulate(options: SimOptions = {}) {
           rememberedUrl: opts.rememberedUrl ?? null,
           waitForUrl: opts.waitForUrl ?? false,
         });
-        panel = {
-          side: { following: start.state, numbers: new Map(), repair: null },
+        // The session is <Panel>'s own; only what it is given to do its I/O with is made up here.
+        const view: PanelView = {
+          session: new Session(start, {
+            send: (message) => panelSends([message]),
+            show: (shown) => {
+              // As <Panel> does: an empty tree does not blank one it already holds.
+              if (shown.kind === 'tree' && (shown.nodes.length || view.held.sent.length === 0))
+                view.held = hold(view.held, { type: 'tree', nodes: shown.nodes }).state;
+              else if (shown.kind === 'ops') {
+                view.held = hold(view.held, {
+                  type: 'ops',
+                  ops: shown.ops,
+                  commit: shown.commit,
+                  t: 0,
+                }).state;
+              }
+            },
+            forget: () => (view.held = EMPTY),
+            gap: (gap) => void gaps.push(gap),
+            changed: () => {},
+            now: () => clock,
+            timer: (ms, run) => {
+              const entry = { at: clock + ms, what: 'panel timer', run };
+              timers.push(entry);
+              timers.sort((a, b) => a.at - b.at);
+              return () => {
+                const index = timers.indexOf(entry);
+                if (index >= 0) timers.splice(index, 1);
+              };
+            },
+          }),
           held: EMPTY,
         };
-        panelSends(start.send);
+        panel = view;
+        view.session.begin();
       });
     },
     change(id: string): void {
@@ -337,7 +326,7 @@ export function simulate(options: SimOptions = {}) {
       act(`close ${id}`, () => die(tab(id)));
     },
     pick(id: string): void {
-      act(`pick ${id}`, () => panelHearsStep(panelStep(panel!.side, { type: 'pick', id }, clock)));
+      act(`pick ${id}`, () => panel!.session.pick(id));
     },
     deliver,
     tick,

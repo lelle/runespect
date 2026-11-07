@@ -64,3 +64,5 @@ export type { ThemeSetting, ResolvedTheme } from './theme';
 export { Theme } from './theme.svelte';
 export { Search } from './search.svelte';
 export { Preferences } from './preferences.svelte';
+export { Session } from './session';
+export type { SessionEnv } from './session';
