@@ -9,6 +9,7 @@ const corpus: Record<string, string> = {
   'let state': `<script>\n  let count = $state(0);\n</script>\n<p>{count}</p>`,
   'const state': `<script>\n  const items = $state([]);\n</script>\n<p>{items.length}</p>`,
   'const raw state': `<script>\n  const box = $state.raw({ n: 1 });\n</script>\n<p>{box.n}</p>`,
+  'destructured state': `<script>\n  let { a, b: [c], ...r } = $state({ a: 1, b: [2], x: 3 });\n</script>\n<p>{a}{c}{r.x}</p>`,
   'props and bindable': `<script>\n  let { a = 1, b = $bindable(2) } = $props();\n</script>\n<p>{a}{b}</p>`,
   'const bindable': `<script>\n  const { v = $bindable(0) } = $props();\n</script>\n<p>{v}</p>`,
   'class fields': `<script>\n  class Box { value = $state(0); double = $derived(this.value * 2); }\n  const box = new Box();\n</script>\n<p>{box.double}</p>`,

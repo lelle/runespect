@@ -146,6 +146,16 @@ let m = 1 as $count;
   expect(symbols.filter((s) => s.kind === 'store')).toEqual([]);
 });
 
+test('destructured state is reported name by name; a rest element and a const are not writable', () => {
+  expect(
+    script(`let { a, b: [c], d = 1, ...others } = $state({ a: 1, b: [2], others: 3 });
+const { e } = $state({ e: 1 });`),
+  ).toEqual({
+    kinds: { a: 'state', c: 'state', d: 'state', e: 'state' },
+    writable: ['a', 'c', 'd'],
+  });
+});
+
 test('a context read is reported; setContext calls fold into one read-only `provided`', () => {
   const { symbols } = componentSymbols(
     parse(
