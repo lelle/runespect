@@ -8,7 +8,8 @@
 //   page-actions.ts      highlight, pick, and the console actions
 //   surface.ts           window.__runespect
 //   link.ts              what a page does for the panels that hear it, as steps
-//   transport.svelte.ts  connect(), broadcast() and the window and dev-server channels
+//   transport.svelte.ts  connect() and broadcast()
+//   transports.ts        the window, dev-server and page channels
 import { resetTree } from './tree.svelte';
 import { resetHistory } from './history';
 import { resetWire } from './wire.svelte';
@@ -49,18 +50,10 @@ export { commits } from './history';
 export { activate, serialize, inspectPath } from './wire.svelte';
 export { highlight, startPick, logNode, storeGlobal } from './page-actions';
 
-export {
-  connect,
-  broadcast,
-  createWindowTransport,
-  createHotTransport,
-  pageChannel,
-  HOT_EVENT,
-  setOpenInEditor,
-  openInEditor,
-  openFile,
-} from './transport.svelte';
-export type { HotChannel, OpenInEditor } from './transport.svelte';
+export { connect, broadcast, setOpenInEditor, openInEditor, openFile } from './transport.svelte';
+export type { OpenInEditor } from './transport.svelte';
+export { createWindowTransport, createHotTransport, pageChannel, HOT_EVENT } from './transports';
+export type { HotChannel } from './transports';
 export { startLink, linkStep } from './link';
 export type { Link, LinkEffect, LinkEvent, LinkStep } from './link';
 
