@@ -1,6 +1,6 @@
 {
   "name": "@runespect/ui",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "type": "module",
   "description": "Svelte 5 DevTools: runespect's panel and in-page overlay for the component tree and live runes state.",

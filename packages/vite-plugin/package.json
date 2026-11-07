@@ -1,6 +1,6 @@
 {
   "name": "@runespect/vite-plugin",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "type": "module",
   "description": "Svelte 5 DevTools as a Vite plugin: the component tree and live runes state, with editing.",

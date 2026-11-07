@@ -1,6 +1,6 @@
 {
   "name": "@runespect/agent",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "type": "module",
   "description": "Svelte 5 DevTools: runespect's in-page agent, which holds the component tree and live runes state. Installed with @runespect/vite-plugin.",
