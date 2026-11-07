@@ -19,7 +19,7 @@
     "@runespect/ui": "workspace:*",
     "@crxjs/vite-plugin": "3.0.0",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
-    "vite": "8.3.4",
-    "svelte": "5.57.1"
+    "vite": "8.3.5",
+    "svelte": "5.57.3"
   }
 }
