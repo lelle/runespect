@@ -1,5 +1,21 @@
 # @runespect/extension
 
+## 0.3.0
+
+### Minor Changes
+
+- [#45](https://github.com/lelle/runespect/pull/45) [`612ccdd`](https://github.com/lelle/runespect/commit/612ccddb88dcff4545827f0492aacf9ab0967c93) Thanks [@lelle](https://github.com/lelle)! - Open in editor works with any editor: it asks the dev server to open the file through Vite's `/__open-in-editor`, which opens the editor `LAUNCH_EDITOR` or `EDITOR` names, so WebStorm, Rider, Zed and others work as well as VS Code. A notice says so for 3 seconds, and where to look if nothing opens. `runespect({ openInEditor: 'vscode' })` keeps the `vscode://` links, for a dev server on another machine.
+
+### Patch Changes
+
+- [#56](https://github.com/lelle/runespect/pull/56) [`f9b1e9c`](https://github.com/lelle/runespect/commit/f9b1e9c5b2d39b27bb708d26a56d835222d87c85) Thanks [@lelle](https://github.com/lelle)! - The extension's icon has a thin dark outline in every size, so it stands out on a light toolbar.
+
+- [#40](https://github.com/lelle/runespect/pull/40) [`1e0e03d`](https://github.com/lelle/runespect/commit/1e0e03dda9583ab050076c4461585d02e032169c) Thanks [@lelle](https://github.com/lelle)! - Every message a page sends carries a number, one more than the last. A panel that hears a number skipped knows a message was lost on the way: it records a `gap` (in the extension's event log; the panel window warns once per page in its own console), and asks the page it follows for its tree and history again, so what it shows matches the page.
+
+- [#53](https://github.com/lelle/runespect/pull/53) [`e1f4471`](https://github.com/lelle/runespect/commit/e1f44711bd74f7d7dcf15ef469d3246f47ef142d) Thanks [@lelle](https://github.com/lelle)! - Stop the Names only walk at 10,000 components, so a page where components all hold each other cannot hang the tab.
+
+- [#44](https://github.com/lelle/runespect/pull/44) [`9755820`](https://github.com/lelle/runespect/commit/9755820339ade5a8dc99e2666cadc6b06a65e7c9) Thanks [@lelle](https://github.com/lelle)! - The panel keeps to its tab across a reload, and drops tabs that are gone: a closed tab leaves the list, and a reloaded one stays one row. Another tab opening, or one saying hello again, no longer takes the panel from the page it follows. With no url to follow, it takes a tab that is shown over one in the background. The chip says `· 3 pages`. A page asked for its tree that does not send it in time is asked again.
+
 ## 0.2.0
 
 ### Minor Changes

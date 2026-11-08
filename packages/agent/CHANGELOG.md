@@ -1,5 +1,25 @@
 # @runespect/agent
 
+## 0.3.0
+
+### Minor Changes
+
+- [#45](https://github.com/lelle/runespect/pull/45) [`612ccdd`](https://github.com/lelle/runespect/commit/612ccddb88dcff4545827f0492aacf9ab0967c93) Thanks [@lelle](https://github.com/lelle)! - Open in editor works with any editor: it asks the dev server to open the file through Vite's `/__open-in-editor`, which opens the editor `LAUNCH_EDITOR` or `EDITOR` names, so WebStorm, Rider, Zed and others work as well as VS Code. A notice says so for 3 seconds, and where to look if nothing opens. `runespect({ openInEditor: 'vscode' })` keeps the `vscode://` links, for a dev server on another machine.
+
+### Patch Changes
+
+- [#35](https://github.com/lelle/runespect/pull/35) [`9539987`](https://github.com/lelle/runespect/commit/95399878cb4581ca46cc497220cf88d0288b1b1b) Thanks [@lelle](https://github.com/lelle)! - Highlight a component that renders no element of its own with a dashed box around what its children render, named `Name (via children)`, instead of drawing nothing.
+
+- [#40](https://github.com/lelle/runespect/pull/40) [`1e0e03d`](https://github.com/lelle/runespect/commit/1e0e03dda9583ab050076c4461585d02e032169c) Thanks [@lelle](https://github.com/lelle)! - Every message a page sends carries a number, one more than the last. A panel that hears a number skipped knows a message was lost on the way: it records a `gap` (in the extension's event log; the panel window warns once per page in its own console), and asks the page it follows for its tree and history again, so what it shows matches the page.
+
+- [#43](https://github.com/lelle/runespect/pull/43) [`d483abc`](https://github.com/lelle/runespect/commit/d483abc568325586d627a31d26b98e3f99ade8d9) Thanks [@lelle](https://github.com/lelle)! - A page a panel has spoken to keeps its id in the tab's `sessionStorage` and says `bye` when it goes. The next page in the tab names it in its hello (`replaces`). A page answers a `ping` with its hello without following, says whether its tab is visible, and says hello again when the tab is shown or hidden. A tab no panel has spoken to writes nothing.
+
+- [#36](https://github.com/lelle/runespect/pull/36) [`91cb58a`](https://github.com/lelle/runespect/commit/91cb58a02e9cec297063a95374d2d9e77d1b6bff) Thanks [@lelle](https://github.com/lelle)! - The panel says how many pages it hears (`/checkout · 3 pages heard ▾`), and its list shows each page's url, when it last spoke, its title, tier and agent version. A page that navigates on the client says hello again, so it is listed under its new url and title.
+
+- [#35](https://github.com/lelle/runespect/pull/35) [`f1cf34f`](https://github.com/lelle/runespect/commit/f1cf34f2461cbd51fd493d19f5ae6624f5c82873) Thanks [@lelle](https://github.com/lelle)! - `__runespect.set()` with a name like `constructor` that the component does not have is refused as `unknown-symbol`, not `not-writable`.
+
+- [#33](https://github.com/lelle/runespect/pull/33) [`65e243a`](https://github.com/lelle/runespect/commit/65e243ad2028d6bd2a18d64a88df4a9b398dc6fd) Thanks [@lelle](https://github.com/lelle)! - `__runespect.set()` says why it did nothing: a console warning with the reason, and a `refused` event in the event log, which a refused edit from the panel now records too. A path to an array index the array does not have, or that is not a whole number, is refused instead of adding a stray property.
+
 ## 0.2.0
 
 ### Minor Changes
