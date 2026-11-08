@@ -17,7 +17,7 @@ repository.
 - **Category:** Developer Tools
 - **Language:** English
 - **Icon:** `public/icons/icon-128.png`
-- **Homepage:** https://github.com/lelle/runespect
+- **Homepage:** https://lelle.github.io/runespect/
 - **Support:** https://github.com/lelle/runespect/issues
 
 ## Privacy practices
