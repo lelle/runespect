@@ -6,7 +6,7 @@
   import preview from '#lib/og.png';
   import '#lib/site.css';
   import favicon from '../../../../packages/extension/public/icons/icon-32.png';
-  import rune from '../../../../packages/extension/icons/icon-small.png';
+  import rune from '../../../../packages/extension/public/icons/icon-32.png';
 
   let { data, children } = $props();
 
