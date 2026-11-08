@@ -1,5 +1,11 @@
 # @runespect/extension
 
+## 0.3.1
+
+### Patch Changes
+
+- [#59](https://github.com/lelle/runespect/pull/59) [`1ccdb91`](https://github.com/lelle/runespect/commit/1ccdb91a0e65501031eb3b4378017abf7a0283d0) Thanks [@lelle](https://github.com/lelle)! - The extension's website link, on Chrome's extensions page, goes to the runespect site with its docs and demo instead of the GitHub repository.
+
 ## 0.3.0
 
 ### Minor Changes
